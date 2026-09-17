@@ -1,0 +1,81 @@
+<resources>
+    <string name="app_name">OpenFocus</string>
+    <string name="app_tagline">Reclaim your time. Focus on what matters.</string>
+
+    <!-- Accessibility Service -->
+    <string name="accessibility_service_label">OpenFocus Focus Guard</string>
+    <string name="accessibility_service_description">OpenFocus uses this service to detect when a blocked app opens and show the block screen. It does NOT read your messages, passwords, or personal content.</string>
+
+    <!-- Navigation -->
+    <string name="nav_dashboard">Dashboard</string>
+    <string name="nav_blocklist">Block List</string>
+    <string name="nav_focus">Focus</string>
+    <string name="nav_insights">Insights</string>
+    <string name="nav_settings">Settings</string>
+
+    <!-- Dashboard -->
+    <string name="status_off">OFF</string>
+    <string name="status_normal">NORMAL</string>
+    <string name="status_strict">STRICT</string>
+    <string name="blocking_off_desc">Blocking is disabled. All apps and websites are accessible.</string>
+    <string name="blocking_normal_desc">Normal blocking is active. Blocked apps and websites are restricted.</string>
+    <string name="blocking_strict_desc">Strict mode is active. Blocking is reinforced and harder to disable.</string>
+    <string name="start_blocking">Start Blocking</string>
+    <string name="stop_blocking">Stop Blocking</string>
+    <string name="pause_blocking">Pause</string>
+
+    <!-- Focus -->
+    <string name="focus_mode">Focus Mode</string>
+    <string name="focus_start">Start Focus</string>
+    <string name="focus_pause">Pause</string>
+    <string name="focus_resume">Resume</string>
+    <string name="focus_end">End Session</string>
+    <string name="focus_complete">Session Complete!</string>
+    <string name="focus_notification_title">Focus Session Active</string>
+    <string name="focus_notification_channel">Focus Timer</string>
+
+    <!-- Block Screen -->
+    <string name="block_screen_title">Stay Focused!</string>
+    <string name="block_screen_message">This content is blocked to help you focus.</string>
+    <string name="block_screen_return">Go Back</string>
+
+    <!-- Permissions -->
+    <string name="perm_usage_stats_title">App Usage Access</string>
+    <string name="perm_usage_stats_desc">Required to show app usage insights and detect which apps you use most. Grant in Android Settings → Apps → Special app access → Usage access.</string>
+    <string name="perm_accessibility_title">Accessibility Service</string>
+    <string name="perm_accessibility_desc">Required to detect when a blocked app is opened and show the block screen. OpenFocus does NOT read your messages, passwords, or personal content.</string>
+    <string name="perm_notifications_title">Notifications</string>
+    <string name="perm_notifications_desc">Required to show focus timer progress and blocking status notifications.</string>
+    <string name="perm_vpn_title">VPN Permission</string>
+    <string name="perm_vpn_desc">Required for local DNS-based website blocking. This creates a local-only VPN — no data leaves your device.</string>
+
+    <!-- Settings -->
+    <string name="settings_theme">Theme</string>
+    <string name="settings_theme_system">Follow System</string>
+    <string name="settings_theme_dark">Dark</string>
+    <string name="settings_theme_light">Light</string>
+    <string name="settings_language">Language</string>
+    <string name="settings_notifications">Notifications</string>
+    <string name="settings_sound">Sound</string>
+    <string name="settings_vibration">Vibration</string>
+
+    <!-- Support -->
+    <string name="support_email">support@openfocus.app</string>
+    <string name="support_github">https://github.com/openfocus-app/OpenFocus</string>
+    <string name="support_issues">https://github.com/openfocus-app/OpenFocus/issues</string>
+
+    <!-- Errors -->
+    <string name="error_invalid_domain">Please enter a valid domain (e.g., example.com)</string>
+    <string name="error_domain_exists">This domain is already in your block list</string>
+    <string name="error_empty_keyword">Keyword cannot be empty</string>
+    <string name="error_duplicate_routine">A routine with this name already exists</string>
+
+    <!-- Content descriptions (Accessibility) -->
+    <string name="cd_fox_mascot">FocusFox mascot illustration</string>
+    <string name="cd_profile_icon">Profile icon</string>
+    <string name="cd_settings_icon">Open settings</string>
+    <string name="cd_add_item">Add item</string>
+    <string name="cd_delete_item">Delete item</string>
+    <string name="cd_edit_item">Edit item</string>
+    <string name="cd_toggle_item">Toggle item</string>
+</resources>

@@ -1,0 +1,152 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    FocusFox mascot — OpenFocus original artwork
+    A friendly fox character representing focus and productivity
+    Created for the OpenFocus open-source project (Apache-2.0)
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="200dp"
+    android:height="200dp"
+    android:viewportWidth="200"
+    android:viewportHeight="200">
+
+    <!-- Body — warm orange fox body -->
+    <path
+        android:pathData="M100,160 C70,160 50,145 45,125 C40,105 42,85 55,72 L100,60 L145,72 C158,85 160,105 155,125 C150,145 130,160 100,160 Z"
+        android:fillColor="#E8823C" />
+
+    <!-- Belly — cream colored -->
+    <path
+        android:pathData="M100,155 C82,155 70,143 68,128 C66,113 72,100 85,95 L100,90 L115,95 C128,100 134,113 132,128 C130,143 118,155 100,155 Z"
+        android:fillColor="#F5D5A8" />
+
+    <!-- Head -->
+    <path
+        android:pathData="M100,30 C75,30 58,47 58,70 C58,93 75,108 100,108 C125,108 142,93 142,70 C142,47 125,30 100,30 Z"
+        android:fillColor="#E8823C" />
+
+    <!-- Left ear -->
+    <path
+        android:pathData="M72,42 L62,15 L88,35 Z"
+        android:fillColor="#E8823C" />
+    <!-- Left ear inner -->
+    <path
+        android:pathData="M75,40 L67,22 L85,36 Z"
+        android:fillColor="#F5A05A" />
+
+    <!-- Right ear -->
+    <path
+        android:pathData="M128,42 L138,15 L112,35 Z"
+        android:fillColor="#E8823C" />
+    <!-- Right ear inner -->
+    <path
+        android:pathData="M125,40 L133,22 L115,36 Z"
+        android:fillColor="#F5A05A" />
+
+    <!-- Face white area -->
+    <path
+        android:pathData="M100,48 C88,48 80,57 80,68 C80,79 88,88 100,88 C112,88 120,79 120,68 C120,57 112,48 100,48 Z"
+        android:fillColor="#F5D5A8" />
+
+    <!-- Left eye -->
+    <ellipse
+        android:centerX="88"
+        android:centerY="66"
+        android:radiusX="5"
+        android:radiusY="6"
+        android:fillColor="#1A2B3C" />
+    <!-- Left eye shine -->
+    <ellipse
+        android:centerX="90"
+        android:centerY="63"
+        android:radiusX="2"
+        android:radiusY="2"
+        android:fillColor="#FFFFFF" />
+
+    <!-- Right eye -->
+    <ellipse
+        android:centerX="112"
+        android:centerY="66"
+        android:radiusX="5"
+        android:radiusY="6"
+        android:fillColor="#1A2B3C" />
+    <!-- Right eye shine -->
+    <ellipse
+        android:centerX="114"
+        android:centerY="63"
+        android:radiusX="2"
+        android:radiusY="2"
+        android:fillColor="#FFFFFF" />
+
+    <!-- Nose -->
+    <ellipse
+        android:centerX="100"
+        android:centerY="76"
+        android:radiusX="4"
+        android:radiusY="3"
+        android:fillColor="#4A2510" />
+
+    <!-- Smile -->
+    <path
+        android:pathData="M93,82 Q100,88 107,82"
+        android:strokeColor="#4A2510"
+        android:strokeWidth="2"
+        android:fillColor="@android:color/transparent"
+        android:strokeLineCap="round" />
+
+    <!-- Cheek blush left -->
+    <ellipse
+        android:centerX="78"
+        android:centerY="76"
+        android:radiusX="7"
+        android:radiusY="5"
+        android:fillColor="#F5705A"
+        android:fillAlpha="0.5" />
+
+    <!-- Cheek blush right -->
+    <ellipse
+        android:centerX="122"
+        android:centerY="76"
+        android:radiusX="7"
+        android:radiusY="5"
+        android:fillColor="#F5705A"
+        android:fillAlpha="0.5" />
+
+    <!-- Tail -->
+    <path
+        android:pathData="M145,130 C165,120 175,140 170,155 C165,170 148,165 142,150 C138,140 140,132 145,130 Z"
+        android:fillColor="#E8823C" />
+    <!-- Tail tip -->
+    <path
+        android:pathData="M168,153 C166,163 155,167 148,162 C145,154 149,147 155,148 C162,149 168,152 168,153 Z"
+        android:fillColor="#FFFFFF" />
+
+    <!-- Small paw left -->
+    <ellipse
+        android:centerX="65"
+        android:centerY="155"
+        android:radiusX="12"
+        android:radiusY="8"
+        android:fillColor="#E8823C" />
+
+    <!-- Small paw right -->
+    <ellipse
+        android:centerX="135"
+        android:centerY="155"
+        android:radiusX="12"
+        android:radiusY="8"
+        android:fillColor="#E8823C" />
+
+    <!-- Focus symbol — small gear/star on forehead -->
+    <path
+        android:pathData="M100,44 L101.8,40.4 L105.4,42.2 L105,38.2 L109,38 L106.8,34.6 L110.4,32.8 L107.2,30.4 L109,27 L105,27.2 L104.8,23.2 L101.6,25.4 L100,22 L98.4,25.4 L95.2,23.2 L95,27.2 L91,27 L92.8,30.4 L89.6,32.8 L93.2,34.6 L91,38 L95,38.2 L94.6,42.2 L98.2,40.4 Z"
+        android:fillColor="#3287E8"
+        android:fillAlpha="0.9" />
+    <ellipse
+        android:centerX="100"
+        android:centerY="33"
+        android:radiusX="4"
+        android:radiusY="4"
+        android:fillColor="#FFFFFF" />
+
+</vector>

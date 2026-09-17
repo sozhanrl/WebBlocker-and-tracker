@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- App launcher icon foreground — fox head with focus accent -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Fox head -->
+    <path
+        android:pathData="M54,18 C38,18 26,30 26,46 C26,62 38,74 54,74 C70,74 82,62 82,46 C82,30 70,18 54,18 Z"
+        android:fillColor="#E8823C" />
+
+    <!-- Left ear -->
+    <path
+        android:pathData="M36,28 L28,8 L48,24 Z"
+        android:fillColor="#E8823C" />
+    <path
+        android:pathData="M38,27 L32,12 L46,24 Z"
+        android:fillColor="#F5A05A" />
+
+    <!-- Right ear -->
+    <path
+        android:pathData="M72,28 L80,8 L60,24 Z"
+        android:fillColor="#E8823C" />
+    <path
+        android:pathData="M70,27 L76,12 L62,24 Z"
+        android:fillColor="#F5A05A" />
+
+    <!-- Face -->
+    <path
+        android:pathData="M54,30 C44,30 38,38 38,46 C38,54 44,62 54,62 C64,62 70,54 70,46 C70,38 64,30 54,30 Z"
+        android:fillColor="#F5D5A8" />
+
+    <!-- Eyes -->
+    <ellipse android:centerX="44" android:centerY="44" android:radiusX="4" android:radiusY="5" android:fillColor="#1A2B3C" />
+    <ellipse android:centerX="46" android:centerY="41" android:radiusX="1.5" android:radiusY="1.5" android:fillColor="#FFFFFF" />
+    <ellipse android:centerX="64" android:centerY="44" android:radiusX="4" android:radiusY="5" android:fillColor="#1A2B3C" />
+    <ellipse android:centerX="66" android:centerY="41" android:radiusX="1.5" android:radiusY="1.5" android:fillColor="#FFFFFF" />
+
+    <!-- Nose -->
+    <ellipse android:centerX="54" android:centerY="52" android:radiusX="3" android:radiusY="2.5" android:fillColor="#4A2510" />
+
+    <!-- Focus accent dot on forehead -->
+    <ellipse android:centerX="54" android:centerY="22" android:radiusX="5" android:radiusY="5" android:fillColor="#3287E8" />
+    <ellipse android:centerX="54" android:centerY="22" android:radiusX="2.5" android:radiusY="2.5" android:fillColor="#FFFFFF" />
+
+    <!-- Tail hint at bottom -->
+    <path
+        android:pathData="M70,78 C80,72 88,82 85,90 C82,98 72,96 70,88 Z"
+        android:fillColor="#E8823C" />
+    <ellipse android:centerX="83" android:centerY="90" android:radiusX="5" android:radiusY="4" android:fillColor="#FFFFFF" />
+
+</vector>

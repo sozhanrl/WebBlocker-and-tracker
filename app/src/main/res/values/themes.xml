@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Base application theme - used by splash screen and activity -->
+    <style name="Theme.OpenFocus" parent="Theme.Material3.DayNight.NoActionBar" />
+    <style name="Theme.OpenFocus.Splash" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_background</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>
+        <item name="postSplashScreenTheme">@style/Theme.OpenFocus</item>
+    </style>
+</resources>
