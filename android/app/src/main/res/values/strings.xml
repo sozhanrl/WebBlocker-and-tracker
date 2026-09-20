@@ -1,0 +1,36 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">FocusForge</string>
+    <string name="title_activity_main">FocusForge</string>
+    <string name="package_name">com.openfocus.app</string>
+    <string name="custom_url_scheme">com.openfocus.app</string>
+
+    <!-- Accessibility Service -->
+    <string name="accessibility_service_label">FocusForge App Blocker Guard</string>
+    <string name="accessibility_service_description">FocusForge monitors which app is opened in the foreground exclusively to enforce your active NEET study block schedules and focus mode sessions. It never reads keystrokes, messages, passwords, or personal content.</string>
+
+    <!-- Focus Timer Notification -->
+    <string name="focus_notification_channel_id">focus_timer_channel</string>
+    <string name="focus_notification_channel_name">Focus Timer &amp; Study Sessions</string>
+    <string name="focus_notification_channel_desc">Shows ongoing study countdown, subject name, and pause controls during focus sessions.</string>
+    <string name="focus_session_active_title">Focus Session Active: %1$s</string>
+    <string name="focus_session_countdown">Remaining: %1$s | NEET 2027 Mode</string>
+    <string name="focus_session_paused">Paused: %1$s remaining</string>
+    <string name="focus_action_pause">Pause</string>
+    <string name="focus_action_resume">Resume</string>
+    <string name="focus_action_stop">Stop Session</string>
+
+    <!-- Block Screen Strings -->
+    <string name="block_screen_badge">FOCUSFORGE • NEET 2027</string>
+    <string name="block_screen_title">Focus Session Active</string>
+    <string name="block_screen_subtitle">This app is blocked during your study session.</string>
+    <string name="block_screen_return_btn">Return to Study</string>
+    <string name="block_screen_end_btn">End Focus Session</string>
+    <string name="block_screen_reason_label">Reason:</string>
+    <string name="block_screen_reason_text">Your focus session is active.</string>
+    <string name="block_screen_blocked_app_label">Blocked App:</string>
+
+    <!-- Device Admin Strings -->
+    <string name="device_admin_label">FocusForge 5-Strike Lockdown</string>
+    <string name="device_admin_description">Used exclusively to instantly lock the screen for 5 minutes when a student attempts to open the same blocked app or website 5 times during focus sessions.</string>
+</resources>

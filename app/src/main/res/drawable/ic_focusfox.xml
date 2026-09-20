@@ -49,41 +49,26 @@
         android:fillColor="#F5D5A8" />
 
     <!-- Left eye -->
-    <ellipse
-        android:centerX="88"
-        android:centerY="66"
-        android:radiusX="5"
-        android:radiusY="6"
+    <path
+        android:pathData="M83,66 a5,6 0 1,0 10,0 a5,6 0 1,0 -10,0 Z"
         android:fillColor="#1A2B3C" />
     <!-- Left eye shine -->
-    <ellipse
-        android:centerX="90"
-        android:centerY="63"
-        android:radiusX="2"
-        android:radiusY="2"
+    <path
+        android:pathData="M88,63 a2,2 0 1,0 4,0 a2,2 0 1,0 -4,0 Z"
         android:fillColor="#FFFFFF" />
 
     <!-- Right eye -->
-    <ellipse
-        android:centerX="112"
-        android:centerY="66"
-        android:radiusX="5"
-        android:radiusY="6"
+    <path
+        android:pathData="M107,66 a5,6 0 1,0 10,0 a5,6 0 1,0 -10,0 Z"
         android:fillColor="#1A2B3C" />
     <!-- Right eye shine -->
-    <ellipse
-        android:centerX="114"
-        android:centerY="63"
-        android:radiusX="2"
-        android:radiusY="2"
+    <path
+        android:pathData="M112,63 a2,2 0 1,0 4,0 a2,2 0 1,0 -4,0 Z"
         android:fillColor="#FFFFFF" />
 
     <!-- Nose -->
-    <ellipse
-        android:centerX="100"
-        android:centerY="76"
-        android:radiusX="4"
-        android:radiusY="3"
+    <path
+        android:pathData="M96,76 a4,3 0 1,0 8,0 a4,3 0 1,0 -8,0 Z"
         android:fillColor="#4A2510" />
 
     <!-- Smile -->
@@ -95,20 +80,14 @@
         android:strokeLineCap="round" />
 
     <!-- Cheek blush left -->
-    <ellipse
-        android:centerX="78"
-        android:centerY="76"
-        android:radiusX="7"
-        android:radiusY="5"
+    <path
+        android:pathData="M71,76 a7,5 0 1,0 14,0 a7,5 0 1,0 -14,0 Z"
         android:fillColor="#F5705A"
         android:fillAlpha="0.5" />
 
     <!-- Cheek blush right -->
-    <ellipse
-        android:centerX="122"
-        android:centerY="76"
-        android:radiusX="7"
-        android:radiusY="5"
+    <path
+        android:pathData="M115,76 a7,5 0 1,0 14,0 a7,5 0 1,0 -14,0 Z"
         android:fillColor="#F5705A"
         android:fillAlpha="0.5" />
 
@@ -122,19 +101,13 @@
         android:fillColor="#FFFFFF" />
 
     <!-- Small paw left -->
-    <ellipse
-        android:centerX="65"
-        android:centerY="155"
-        android:radiusX="12"
-        android:radiusY="8"
+    <path
+        android:pathData="M53,155 a12,8 0 1,0 24,0 a12,8 0 1,0 -24,0 Z"
         android:fillColor="#E8823C" />
 
     <!-- Small paw right -->
-    <ellipse
-        android:centerX="135"
-        android:centerY="155"
-        android:radiusX="12"
-        android:radiusY="8"
+    <path
+        android:pathData="M123,155 a12,8 0 1,0 24,0 a12,8 0 1,0 -24,0 Z"
         android:fillColor="#E8823C" />
 
     <!-- Focus symbol — small gear/star on forehead -->
@@ -142,11 +115,8 @@
         android:pathData="M100,44 L101.8,40.4 L105.4,42.2 L105,38.2 L109,38 L106.8,34.6 L110.4,32.8 L107.2,30.4 L109,27 L105,27.2 L104.8,23.2 L101.6,25.4 L100,22 L98.4,25.4 L95.2,23.2 L95,27.2 L91,27 L92.8,30.4 L89.6,32.8 L93.2,34.6 L91,38 L95,38.2 L94.6,42.2 L98.2,40.4 Z"
         android:fillColor="#3287E8"
         android:fillAlpha="0.9" />
-    <ellipse
-        android:centerX="100"
-        android:centerY="33"
-        android:radiusX="4"
-        android:radiusY="4"
+    <path
+        android:pathData="M96,33 a4,4 0 1,0 8,0 a4,4 0 1,0 -8,0 Z"
         android:fillColor="#FFFFFF" />
 
 </vector>

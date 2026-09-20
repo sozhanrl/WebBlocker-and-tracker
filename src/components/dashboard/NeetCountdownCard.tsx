@@ -1,12 +1,12 @@
 import React from 'react';
 import { Card } from '../common/Card';
-import { getNeet2027DaysRemaining } from '../../utils/formatters';
-import { Flame, Sparkles, GraduationCap, ArrowRight } from 'lucide-react';
+import { getNeet2027CountdownInfo } from '../../utils/formatters';
+import { Flame, Sparkles, GraduationCap, ArrowRight, Calendar } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 
 export const NeetCountdownCard: React.FC = () => {
   const { setActiveTab, neetChapters } = useApp();
-  const daysLeft = getNeet2027DaysRemaining();
+  const { daysLeft, weeksLeft, isExamPassed, formattedTarget } = getNeet2027CountdownInfo();
 
   const totalChapters = neetChapters.length;
   const completedOrRevision = neetChapters.filter(c => c.status === 'Completed' || c.status === 'Revision').length;
@@ -19,10 +19,14 @@ export const NeetCountdownCard: React.FC = () => {
 
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div className="space-y-1">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <span className="px-2 py-0.5 rounded-md bg-indigo-500/20 text-indigo-300 text-[10px] font-bold uppercase tracking-wider flex items-center gap-1">
               <GraduationCap className="w-3 h-3" />
               NEET 2027 Aspirant Journey
+            </span>
+            <span className="px-2 py-0.5 rounded-md bg-sky-500/20 text-sky-300 text-[10px] font-bold flex items-center gap-1">
+              <Calendar className="w-3 h-3" />
+              Target Exam Date: {formattedTarget}
             </span>
             <span className="text-[11px] text-emerald-400 font-semibold flex items-center gap-1">
               <Sparkles className="w-3 h-3" />
@@ -30,7 +34,13 @@ export const NeetCountdownCard: React.FC = () => {
             </span>
           </div>
           <h3 className="text-base sm:text-lg font-extrabold text-white">
-            {daysLeft} Days Remaining to NEET 2027
+            {isExamPassed ? (
+              <span className="text-emerald-400">NEET 2027 Concluded — Best of Luck Future Doctor!</span>
+            ) : (
+              <>
+                {daysLeft} Days <span className="text-sky-400 font-normal text-sm">({weeksLeft} Weeks)</span> Remaining to NEET 2027
+              </>
+            )}
           </h3>
           <p className="text-xs text-slate-300 italic max-w-md">
             “The stethoscope you will wear is earned in the quiet, focused hours of today.”

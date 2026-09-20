@@ -26,6 +26,7 @@ import {
   SyncState
 } from '../types';
 import { StorageEngine } from '../lib/storage';
+import { getNativeBridge } from '../lib/nativeBridge';
 
 export type NavigationTab =
   | 'home'
@@ -72,10 +73,13 @@ interface AppContextType {
 
   // App & Web Blocker
   blockedApps: BlockedApp[];
+  setBlockedAppsState: React.Dispatch<React.SetStateAction<BlockedApp[]>>;
   toggleAppBlocked: (appId: string) => void;
   updateAppLimit: (appId: string, limitMinutes: number) => void;
   blockedWebsites: BlockedWebsite[];
   addBlockedWebsite: (url: string, name: string, category: string) => void;
+  bulkAddBlockedWebsites: (sites: { url: string; name: string; category: string }[]) => void;
+  removeBlockedWebsitesByCategory: (category: string) => void;
   removeBlockedWebsite: (id: string) => void;
   toggleWebsiteBlocked: (id: string) => void;
   schedules: BlockingSchedule[];
@@ -193,7 +197,34 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  // Network & Offline resilience listener
+  useEffect(() => {
+    const handleOnline = () => {
+      setSyncState('Syncing');
+      setTimeout(() => setSyncState('Synced'), 1000);
+    };
+    const handleOffline = () => {
+      setSyncState('Offline');
+    };
+
+    if (typeof window !== 'undefined') {
+      if (!navigator.onLine) {
+        setSyncState('Offline');
+      }
+      window.addEventListener('online', handleOnline);
+      window.addEventListener('offline', handleOffline);
+      return () => {
+        window.removeEventListener('online', handleOnline);
+        window.removeEventListener('offline', handleOffline);
+      };
+    }
+  }, []);
+
   const triggerManualSync = () => {
+    if (typeof window !== 'undefined' && !navigator.onLine) {
+      setSyncState('Offline');
+      return;
+    }
     setSyncState('Syncing');
     setTimeout(() => {
       setSyncState('Synced');
@@ -209,6 +240,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       document.documentElement.classList.remove('dark');
     }
   }, [settings.isDarkMode]);
+
+  // Sync blocked apps and domains with Android native Accessibility & VPN services
+  // NOTE: This reactive sync effect automatically picks up bulk domain additions and category deletions
+  // from blockedWebsites, forwarding the complete domain set to the native bridge updateBlockList()
+  // which saves it to Android's SharedPreferences ('blocked_domains') for OpenFocusVpnService DNS sinkhole.
+  useEffect(() => {
+    const activePkgs = blockedApps.filter(a => a.isBlocked).map(a => a.packageName);
+    const activeDomains = blockedWebsites.filter(w => w.isBlocked).map(w => w.url);
+    getNativeBridge().updateBlockList({
+      blockedPackages: activePkgs,
+      blockedDomains: activeDomains,
+      isStrict: false,
+      allowEmergencyUnlock: true,
+      activeSubject: 'NEET 2027 Preparation'
+    }).catch(() => {});
+  }, [blockedApps, blockedWebsites]);
 
   // Profile actions
   const updateUserProfile = (updated: Partial<UserProfile>) => {
@@ -257,6 +304,42 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         addedAt: new Date().toISOString().split('T')[0]
       };
       const next = [newSite, ...prev];
+      StorageEngine.setBlockedWebsites(next);
+      return next;
+    });
+  };
+
+  const bulkAddBlockedWebsites = (newSites: { url: string; name: string; category: string }[]) => {
+    setBlockedWebsitesState(prev => {
+      const existingUrls = new Set(prev.map(w => w.url.trim().toLowerCase()));
+      const now = new Date().toISOString().split('T')[0];
+      const additions: BlockedWebsite[] = [];
+
+      for (let i = 0; i < newSites.length; i++) {
+        const cleanUrl = newSites[i].url.trim().toLowerCase();
+        if (!existingUrls.has(cleanUrl)) {
+          existingUrls.add(cleanUrl);
+          additions.push({
+            id: `web-bulk-${Date.now()}-${i}`,
+            url: cleanUrl,
+            name: newSites[i].name || cleanUrl,
+            category: newSites[i].category,
+            isBlocked: true,
+            addedAt: now
+          });
+        }
+      }
+
+      if (additions.length === 0) return prev;
+      const next = [...additions, ...prev];
+      StorageEngine.setBlockedWebsites(next);
+      return next;
+    });
+  };
+
+  const removeBlockedWebsitesByCategory = (category: string) => {
+    setBlockedWebsitesState(prev => {
+      const next = prev.filter(w => w.category !== category);
       StorageEngine.setBlockedWebsites(next);
       return next;
     });
@@ -827,10 +910,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         addCalendarEvent,
         deleteCalendarEvent,
         blockedApps,
+        setBlockedAppsState,
         toggleAppBlocked,
         updateAppLimit,
         blockedWebsites,
         addBlockedWebsite,
+        bulkAddBlockedWebsites,
+        removeBlockedWebsitesByCategory,
         removeBlockedWebsite,
         toggleWebsiteBlocked,
         schedules,

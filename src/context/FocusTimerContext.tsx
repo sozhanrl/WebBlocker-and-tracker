@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useRef } from 'r
 import { NeetSubject } from '../types';
 import { useApp } from './AppContext';
 import confetti from 'canvas-confetti';
+import { getNativeBridge } from '../lib/nativeBridge';
 
 interface CompletedSessionStats {
   durationMinutes: number;
@@ -128,6 +129,8 @@ export const FocusTimerProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       completedTarget: true,
       notes: taskTitle ? `Completed task: ${taskTitle}` : 'Scheduled focus session finished.'
     });
+
+    getNativeBridge().stopFocusSession().catch(console.warn);
   };
 
   const startFocusSession = (
@@ -149,6 +152,13 @@ export const FocusTimerProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     setIsEmergencyUnlocking(false);
     setIsRunning(true);
     setIsPaused(false);
+
+    getNativeBridge().startFocusSession({
+      durationMinutes,
+      subjectName: `${subj} (${chapTitle || 'Study Session'})`,
+      isStrict: strict,
+      remainingSeconds: totalSecs
+    }).catch(console.warn);
   };
 
   const pauseSession = () => setIsPaused(true);
@@ -159,6 +169,7 @@ export const FocusTimerProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     setIsRunning(false);
     setIsPaused(false);
     setIsEmergencyUnlocking(false);
+    getNativeBridge().stopFocusSession().catch(console.warn);
   };
 
   const finishSession = () => {

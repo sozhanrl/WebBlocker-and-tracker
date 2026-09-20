@@ -74,5 +74,37 @@ FocusForge — NEET 2027 Tracker + Checklist Routines + Study Planner + WebBlock
 ├── 12. College Timetable (Engineering Routine Editor + Class Hours 14:00–19:00 Synchronization)
 ├── 13. Analytics & Insights (Recharts Focus Bars + Subject Distribution Pie + NEET Score Trajectory)
 ├── 14. Settings & Profile (Persistent Username/Password Auth + Supabase Cloud + Local Backup/Restore)
-└── 15. Android Native Architecture (AccessibilityService + UsageStats + VPN + Foreground Timer)
+├── 15. Android Native Architecture (AccessibilityService + UsageStats + VPN + Foreground Timer + Device Admin Lockdown)
+├── 16. Adult Content Shield (Curated 64k+ Domain Blocklist + On-Device DNS Sinkhole + 30s Unlock Delay)
+└── 17. 5-Strike Warning & Device Lockdown (DeviceAdminReceiver + LockdownManager + LockdownOverlayActivity + Daily Strike Rollover)
 ```
+
+---
+
+## 5. Adult Content Shield — Implementation & QA Verification Checklist
+
+| Test Item | Verification Steps | Expected Result | Pass/Fail |
+| :--- | :--- | :--- | :--- |
+| **1. Blocklist Generator & Script** | Run `npm run update:blocklist` (`scripts/fetch-adult-blocklist.ts`). | Downloads StevenBlack porn-only blocklist, normalizes to apex domains, dedupes, and generates `src/lib/adultContentList.ts` (64,265 domains). | **PASS** |
+| **2. Shield Toggle ON (Bulk Population)** | Navigate to Website Blocker tab. Toggle "Adult Content Shield" to **ON**. | Bulk adds all domains from `adultContentList.ts` to `blockedWebsites` with category `"Adult Content"`. Card updates to display *Curated Domains Active*. | **PASS** |
+| **3. Reactive Native Sync to VPN Engine** | Inspect `AppContext.tsx` sync effect -> `getNativeBridge().updateBlockList()`. | Sends active domain list to Capacitor native bridge `FocusBlockerPlugin.kt`, which persists to Android `SharedPreferences` (`blocked_domains`). | **PASS** |
+| **4. On-Device DNS Sinkhole Verification** | Start VPN Protection (`OpenFocusVpnService.kt`). Query/visit a blocked test domain (e.g. `pornhub.com`, `069porn.com`, or subdomains). | `OpenFocusVpnService` intercepts port 53 DNS query, returns `127.0.0.1` sinkhole A-record, and logs: `🚫 DNS SINKHOLE: Blocked domain ... -> 127.0.0.1`. | **PASS** |
+| **5. 30-Second Unlock Delay Safeguard** | Toggle "Adult Content Shield" switch to **OFF**. | Initiates 30-second emergency countdown delay banner. Shield remains active during countdown. | **PASS** |
+| **6. Cancel Unlock / Abort** | Tap *"Keep Shield Active"* button during the 30s countdown. | Countdown stops immediately. Shield remains locked and active. | **PASS** |
+| **7. Completed Unlock Deletion Isolation** | Let the 30s countdown reach `0s`. | Cleans up only `"Adult Content"` category items from `blockedWebsites`, leaving custom blocked websites (e.g. `youtube.com`, `instagram.com`) intact. | **PASS** |
+| **8. Persistent DNS Filtering Banner** | Check Website Blocker header. | Displays clear guidance: *"Uses on-device DNS filtering — for full protection, disable 'Secure DNS' / 'Private DNS' in your browser and Android network settings..."*. | **PASS** |
+
+---
+
+## 6. 5-Strike Warning & Device Lockdown Architecture
+
+| Component | File Location | Key Capabilities & Android System Behavior |
+| :--- | :--- | :--- |
+| **Device Admin Receiver** | `receiver/FocusDeviceAdminReceiver.kt`, `res/xml/device_admin_policy.xml` | Declares `<force-lock />` policy. Allows non-root screen locking via `DevicePolicyManager.lockNow()`. |
+| **Lockdown Manager** | `manager/LockdownManager.kt` | Tracks daily strikes (`violations:<target>`), triggers 5-minute lockdown (`lockdown_until`), re-locks on screen-on, resets target strike upon lockdown trigger, and handles daily date rollover (`violations_reset_date`). |
+| **Dynamic Screen-On Receiver** | `receiver/LockdownReceiver.kt` | Dynamically registered at runtime in `OpenFocusAccessibilityService.onServiceConnected` for `ACTION_SCREEN_ON` and `ACTION_USER_PRESENT`. Re-locks screen if `now < lockdown_until`. |
+| **Unskippable Lockdown Overlay** | `ui/screens/blockscreen/LockdownOverlayActivity.kt` | Immersive full-screen overlay displaying live `MM:SS` countdown timer (`"Locked — back in 4:32"`). Overrides `onBackPressed` as no-op. |
+| **Website Block Interstitial** | `ui/screens/blockscreen/WebsiteBlockedActivity.kt` | Lightweight Activity launched from VPN Service context with `FLAG_ACTIVITY_NEW_TASK`. Shows prominent `"⚠️ Warning {STRIKE_COUNT}/5 — {domain}"` banner. |
+| **Capacitor Plugin & Frontend** | `bridge/FocusBlockerPlugin.kt`, `src/lib/nativeBridge.ts`, `AndroidPermissionsCard.tsx` | Exposes `hasDeviceAdmin`, `'device_admin'` permission intent (`Settings.ACTION_ADD_DEVICE_ADMIN`), and `getStrikeCounts()`. Displays clear, plain-language non-root notice in settings. |
+
+

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="colorPrimary">#0B132B</color>
+    <color name="colorPrimaryDark">#070D1F</color>
+    <color name="colorAccent">#3A86FF</color>
+    <color name="cardBackground">#1C2541</color>
+    <color name="neetPurple">#8338EC</color>
+    <color name="warningOrange">#FB5607</color>
+</resources>

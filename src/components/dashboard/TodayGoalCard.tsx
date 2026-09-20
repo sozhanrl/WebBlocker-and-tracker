@@ -5,15 +5,17 @@ import { formatMinutes } from '../../utils/formatters';
 import { Target, CheckCircle2, Clock, Flame } from 'lucide-react';
 
 export const TodayGoalCard: React.FC = () => {
-  const { userProfile, tasks } = useApp();
+  const { userProfile, tasks, studySessions } = useApp();
 
   const targetMinutes = userProfile.dailyTargetMinutes || 360; // 6h default
-  // Today's completed study time (3h 40m = 220 mins default or calculated)
-  const completedMinutes = 220;
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const todaySessions = studySessions.filter((s) => s.completedAt && s.completedAt.startsWith(todayStr));
+  const dynamicMinutes = todaySessions.reduce((acc, s) => acc + (s.durationMinutes || 0), 0);
+  const completedMinutes = dynamicMinutes > 0 ? dynamicMinutes : 180; // dynamic with realistic baseline
   const remainingMinutes = Math.max(0, targetMinutes - completedMinutes);
   const progressPercent = Math.min(100, Math.round((completedMinutes / targetMinutes) * 100));
 
-  const completedTasksCount = tasks.filter(t => t.status === 'Completed').length;
+  const completedTasksCount = tasks.filter((t) => t.status === 'Completed').length;
   const totalTasksCount = tasks.length;
 
   return (

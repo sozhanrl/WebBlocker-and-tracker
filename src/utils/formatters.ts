@@ -23,13 +23,33 @@ export function formatSecondsToTimer(totalSeconds: number): string {
   return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
 }
 
-export function getNeet2027DaysRemaining(): number {
-  // NEET 2027 is traditionally on the first Sunday of May 2027 (May 2, 2027)
-  const targetDate = new Date('2027-05-02T09:00:00');
+export interface NeetCountdownDetails {
+  daysLeft: number;
+  weeksLeft: number;
+  isExamPassed: boolean;
+  formattedTarget: string;
+}
+
+export function getNeet2027CountdownInfo(): NeetCountdownDetails {
+  // Official Exam Target: 5 May 2027
+  const targetDate = new Date('2027-05-05T09:00:00');
   const now = new Date();
   const diffTime = targetDate.getTime() - now.getTime();
   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-  return Math.max(diffDays, 0);
+  const daysLeft = Math.max(0, diffDays);
+  const weeksLeft = Math.ceil(daysLeft / 7);
+  const isExamPassed = diffTime <= 0;
+
+  return {
+    daysLeft,
+    weeksLeft,
+    isExamPassed,
+    formattedTarget: '5 May 2027'
+  };
+}
+
+export function getNeet2027DaysRemaining(): number {
+  return getNeet2027CountdownInfo().daysLeft;
 }
 
 export function getGreeting(): string {

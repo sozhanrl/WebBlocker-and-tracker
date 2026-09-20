@@ -3,6 +3,7 @@ import { Card } from '../common/Card';
 import { Button } from '../common/Button';
 import { useApp } from '../../context/AppContext';
 import { formatMinutes } from '../../utils/formatters';
+import { AndroidPermissionsCard } from './AndroidPermissionsCard';
 import { BiologyModeSettings } from '../neet/BiologyModeSettings';
 import {
   User,
@@ -27,6 +28,7 @@ import {
 } from 'lucide-react';
 import { StorageEngine } from '../../lib/storage';
 import { isSupabaseConfigured } from '../../lib/supabase';
+import { PermissionDiagnosticsModal } from '../common/PermissionDiagnosticsModal';
 
 interface ProfileScreenProps {
   onOpenAuthModal: () => void;
@@ -49,6 +51,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
 
   const [importStatus, setImportStatus] = useState<string | null>(null);
   const [showAndroidArchModal, setShowAndroidArchModal] = useState(false);
+  const [showDiagnosticsModal, setShowDiagnosticsModal] = useState(false);
 
   const completedChaptersCount = neetChapters.filter(c => c.status === 'Completed').length;
   const totalChaptersCount = neetChapters.length;
@@ -136,6 +139,9 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
           </Button>
         </div>
       </Card>
+
+      {/* Android Native Blocker & Shield Permissions */}
+      <AndroidPermissionsCard />
 
       {/* Biology Organization Mode */}
       <BiologyModeSettings />
@@ -276,20 +282,28 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
 
         {/* Android Native Specs & Local Data Management */}
         <div className="pt-2 space-y-3">
-          <div className="flex items-center justify-between p-3 rounded-xl bg-slate-900/60 border border-white/5">
+          <div className="flex items-center justify-between p-3 rounded-xl bg-slate-900/60 border border-white/5 flex-wrap gap-2">
             <div className="flex items-center gap-2">
               <Smartphone className="w-4 h-4 text-sky-400" />
               <div>
                 <span className="text-xs font-bold text-white block">Android Native Bridge Engine</span>
-                <span className="text-[10px] text-slate-400">AccessibilityService, UsageStats & VPN blocking specs</span>
+                <span className="text-[10px] text-slate-400">AccessibilityService, UsageStats &amp; VPN blocking specs</span>
               </div>
             </div>
-            <button
-              onClick={() => setShowAndroidArchModal(true)}
-              className="text-xs text-sky-400 hover:underline font-semibold"
-            >
-              View Docs
-            </button>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setShowDiagnosticsModal(true)}
+                className="text-xs text-emerald-400 hover:underline font-semibold"
+              >
+                System Diagnostics
+              </button>
+              <button
+                onClick={() => setShowAndroidArchModal(true)}
+                className="text-xs text-sky-400 hover:underline font-semibold"
+              >
+                View Docs
+              </button>
+            </div>
           </div>
 
           <span className="text-xs font-semibold text-slate-300 block mb-2">Local Data Management</span>
@@ -364,6 +378,12 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
           </div>
         </div>
       )}
+
+      {/* System Diagnostics Modal */}
+      <PermissionDiagnosticsModal
+        isOpen={showDiagnosticsModal}
+        onClose={() => setShowDiagnosticsModal(false)}
+      />
     </div>
   );
 };

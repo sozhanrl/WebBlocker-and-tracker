@@ -1,109 +1,91 @@
-# FocusForge — Native Android Bridge & System Architecture
+# FocusForge / OpenFocus — Native Android Bridge & System Architecture
 
-This document provides the native Android architecture required when packaging **FocusForge** as a hybrid or native Android application (via Capacitor, React Native, or a native Kotlin WebView wrapper).
+This document provides the native Android architecture required and implemented in **FocusForge / OpenFocus** (`com.openfocus.app`), built with Capacitor + React/TS + Kotlin Native Services.
 
 ---
 
-## 1. Required System Permissions & Disclosures
+## 1. Required System Permissions & Policies
 
-| Permission | Purpose | User Flow / Settings Intent |
-|------------|---------|-----------------------------|
-| `PACKAGE_USAGE_STATS` | Retrieve screen time and app usage statistics | `Settings.ACTION_USAGE_ACCESS_SETTINGS` |
-| `BIND_ACCESSIBILITY_SERVICE` | Real-time foreground app detection to trigger the block screen overlay | `Settings.ACTION_ACCESSIBILITY_SETTINGS` |
+| Permission / Policy | Purpose | User Flow / Settings Intent |
+| :--- | :--- | :--- |
+| `PACKAGE_USAGE_STATS` | Retrieve real-time screen time and app usage statistics | `Settings.ACTION_USAGE_ACCESS_SETTINGS` |
+| `BIND_ACCESSIBILITY_SERVICE` | Real-time foreground app window detection (`TYPE_WINDOW_STATE_CHANGED`) to intercept blocked apps | `Settings.ACTION_ACCESSIBILITY_SETTINGS` |
+| `BIND_DEVICE_ADMIN` / `<force-lock />` | Immediate screen locking via `DevicePolicyManager.lockNow()` on 5th strike | `DevicePolicyManager.ACTION_ADD_DEVICE_ADMIN` |
 | `FOREGROUND_SERVICE` & `POST_NOTIFICATIONS` | Background Pomodoro timer & persistent notification channel | Android 13+ runtime permission prompt |
-| `BIND_VPN_SERVICE` *(Optional)* | Local DNS loopback filter (`127.0.0.1`) for domain blocking | `VpnService.prepare(context)` |
+| `BIND_VPN_SERVICE` | Local on-device DNS loopback filter (`10.200.0.2:53` -> `127.0.0.1`) for domain blocking | `VpnService.prepare(context)` |
 | `RECEIVE_BOOT_COMPLETED` | Reschedule active study routines after device restart | Manifest declaration |
 
-> [!IMPORTANT]
-> In web browsers, app blocking is simulated via in-app interceptions and redirects. Real operating system app blocking strictly requires the native Android services detailed below.
+---
+
+## 2. Core Native Architecture Structure
+
+```
+android/app/src/main/
+├── AndroidManifest.xml
+├── res/
+│   ├── xml/
+│   │   ├── accessibility_service_config.xml
+│   │   └── device_admin_policy.xml           # USES_POLICY_FORCE_LOCK
+│   └── layout/
+│       ├── activity_block_screen.xml          # App HUD Warning & Lockout Screen
+│       ├── activity_website_blocked.xml       # Domain Interstitial Screen
+│       └── activity_lockdown_overlay.xml      # Immersive 5-min Countdown Overlay
+└── java/com/openfocus/app/
+    ├── bridge/
+    │   └── FocusBlockerPlugin.kt              # Capacitor Plugin (Strikes, Permissions, Blocking)
+    ├── manager/
+    │   ├── BlockingStateManager.kt            # Central thread-safe state manager
+    │   ├── LockdownManager.kt                 # 5-Strike tracking & Device Admin lockNow()
+    │   ├── InstalledAppsManager.kt            # Real PackageManager launchable app loader
+    │   ├── UsageStatsTracker.kt               # App usage analytics
+    │   └── BatteryOptimizationHelper.kt       # OEM background persistence
+    ├── receiver/
+    │   ├── FocusDeviceAdminReceiver.kt        # Device Admin Receiver
+    │   ├── LockdownReceiver.kt                # Runtime listener for SCREEN_ON & USER_PRESENT
+    │   └── BootReceiver.kt                    # Device reboot recovery
+    ├── service/
+    │   ├── accessibility/
+    │   │   └── OpenFocusAccessibilityService.kt # Foreground App Interceptor & Strike Trigger
+    │   ├── vpn/
+    │   │   └── OpenFocusVpnService.kt         # On-device DNS sinkhole & Domain Strike Trigger
+    │   └── timer/
+    │       └── FocusTimerService.kt           # Foreground study countdown notification
+    └── ui/screens/blockscreen/
+        ├── BlockScreenActivity.kt             # App Warning (1-4) & Lockout Screen
+        ├── WebsiteBlockedActivity.kt          # Domain Warning (1-4) & Lockdown Screen
+        └── LockdownOverlayActivity.kt         # Unskippable immersive 5-minute lockdown overlay
+```
 
 ---
 
-## 2. Core Native Services Architecture
+## 3. 5-Strike Warning & Device Lockdown System
 
-```
-android/
-├── app/src/main/
-│   ├── AndroidManifest.xml
-│   └── kotlin/com/focusforge/app/
-│       ├── bridge/
-│       │   └── FocusForgeBridge.kt           # JavaScript <-> Native Kotlin Bridge
-│       ├── service/
-│       │   ├── AppBlockAccessibilityService.kt # Foreground App Interceptor
-│       │   ├── StudyTimerForegroundService.kt  # Background Study Timer
-│       │   └── LocalDnsVpnService.kt           # Local Domain Blocker
-│       ├── manager/
-│       │   ├── UsageStatsTracker.kt           # Screen-time analytics
-│       │   └── ScheduleWorker.kt              # WorkManager routine scheduler
-│       └── ui/
-│           └── NativeBlockOverlayActivity.kt  # System Alert Window block screen
-```
+### A. Strike Tracking & Daily Rollover
+- **Storage:** `SharedPreferences("focus_blocker_prefs")`
+- **Key Pattern:**
+  - Apps: `"violations:<packageName>"` (e.g. `"violations:com.instagram.android"`)
+  - Domains: `"violations:<domain>"` (e.g. `"violations:pornhub.com"`)
+- **Daily Rollover:** Stored under `"violations_reset_date"` (`yyyy-MM-dd`). Any strike query or increment automatically purges prior day counters.
+- **Lockdown Trigger Reset:** When 5 strikes are reached on target `T`, `LockdownManager.triggerLockdown` resets `T`'s violation count to `0`.
+
+### B. Sanctioned Non-Root Lockdown Mechanics
+1. **Screen Lock:** Upon 5th strike, `LockdownManager.triggerLockdown()` executes `DevicePolicyManager.lockNow()`, setting `lockdown_until = System.currentTimeMillis() + 300_000L`.
+2. **Re-Lock Loop:** A dynamically registered `LockdownReceiver` listens for `Intent.ACTION_SCREEN_ON` and `Intent.ACTION_USER_PRESENT`. If `now < lockdown_until`, it immediately calls `devicePolicyManager.lockNow()` again.
+3. **Unskippable Immersive Overlay:** `LockdownOverlayActivity` presents a live `MM:SS` countdown timer (`"Locked — back in 4:32"`), uses `SHOW_WHEN_LOCKED` / `TURN_SCREEN_ON`, and overrides `onBackPressed` as a no-op.
 
 ---
 
-## 3. Kotlin Service Specifications
+## 4. Capacitor JS / TS Native Bridge Interface
 
-### A. Accessibility Service (`AppBlockAccessibilityService.kt`)
-```kotlin
-class AppBlockAccessibilityService : AccessibilityService() {
+```typescript
+// Permission diagnostics
+const permissions = await getNativeBridge().checkPermissions();
+console.log('Device Admin active:', permissions.hasDeviceAdmin);
 
-    private val blockedPackages = mutableSetOf(
-        "com.instagram.android",
-        "com.google.android.youtube",
-        "com.facebook.katana"
-    )
+// Request Device Admin for 5-Strike Lockdown
+await getNativeBridge().requestPermission({ type: 'device_admin' });
 
-    override fun onAccessibilityEvent(event: AccessibilityEvent?) {
-        if (event?.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
-            val foregroundPackage = event.packageName?.toString() ?: return
-
-            if (isStudySessionActive() && blockedPackages.contains(foregroundPackage)) {
-                // Launch Native Block Screen Overlay immediately
-                val intent = Intent(this, NativeBlockOverlayActivity::class.java).apply {
-                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
-                    putExtra("BLOCKED_PACKAGE", foregroundPackage)
-                }
-                startActivity(intent)
-            }
-        }
-    }
-
-    override fun onInterrupt() {}
-}
+// Query live strike counts
+const { strikes, isLockdownActive, lockdownRemainingSec } = await getNativeBridge().getStrikeCounts();
 ```
 
-### B. UsageStatsTracker (`UsageStatsTracker.kt`)
-```kotlin
-class UsageStatsTracker(private val context: Context) {
-
-    fun getDailyAppUsage(startTime: Long, endTime: Long): Map<String, Long> {
-        val usageStatsManager = context.getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
-        val stats = usageStatsManager.queryUsageStats(
-            UsageStatsManager.INTERVAL_DAILY,
-            startTime,
-            endTime
-        )
-
-        return stats.associate { it.packageName to it.totalTimeInForeground }
-    }
-}
-```
-
-### C. Background Timer (`StudyTimerForegroundService.kt`)
-Uses `NotificationCompat.Builder` with a high-priority ongoing notification showing remaining time, NEET subject, and pause/resume actions.
-
----
-
-## 4. WebView / Capacitor JavaScript Interface
-
-When running in the Android shell, the web app calls:
-```javascript
-// Check native capability
-if (window.FocusForgeAndroid) {
-    // Sync block list with native AccessibilityService
-    window.FocusForgeAndroid.updateBlockedPackages(JSON.stringify(['com.instagram.android', 'com.google.android.youtube']));
-
-    // Request usage stats permission
-    window.FocusForgeAndroid.requestUsagePermission();
-}
-```

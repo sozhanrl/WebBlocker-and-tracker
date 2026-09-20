@@ -3,24 +3,42 @@
 @tailwind utilities;
 
 @layer base {
+  *, *::before, *::after {
+    box-sizing: border-box;
+  }
+
   :root {
     --bg-primary: #0B132B;
     --bg-card: #1C2541;
     --bg-elevated: #253256;
     --border-color: #2E3D67;
     --text-muted: #8B9BB4;
+    --sat: env(safe-area-inset-top, 0px);
+    --sab: env(safe-area-inset-bottom, 0px);
+    --sal: env(safe-area-inset-left, 0px);
+    --sar: env(safe-area-inset-right, 0px);
   }
 
-  body {
+  html, body, #root {
+    width: 100%;
+    min-width: 0;
+    max-width: 100vw;
+    margin: 0;
+    padding: 0;
+    overflow-x: hidden;
     background-color: #0B132B;
     color: #F8FAFC;
-    overflow-x: hidden;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  button, input, select, textarea {
+    max-width: 100%;
   }
 
   /* Custom scrollbar */
   ::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
+    width: 5px;
+    height: 5px;
   }
   ::-webkit-scrollbar-track {
     background: #0B132B;
@@ -59,4 +77,9 @@
 
 .glow-danger {
   box-shadow: 0 0 25px -5px rgba(239, 68, 68, 0.4);
+}
+
+/* Safe area bottom padding helper */
+.safe-bottom {
+  padding-bottom: calc(0.5rem + var(--sab));
 }

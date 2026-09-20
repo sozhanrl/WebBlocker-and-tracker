@@ -7,7 +7,8 @@ import {
   CheckCircle2,
   Cloud,
   RefreshCw,
-  Sparkles
+  Sparkles,
+  WifiOff
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { getNeet2027DaysRemaining } from '../../utils/formatters';
@@ -34,8 +35,8 @@ export const Header: React.FC = () => {
   };
 
   return (
-    <header className="sticky top-0 z-40 w-full bg-[#0B132B]/90 backdrop-blur-md border-b border-white/10 px-4 sm:px-6 py-2.5">
-      <div className="max-w-6xl mx-auto flex items-center justify-between">
+    <header className="sticky top-0 z-40 w-full bg-[#0B132B]/95 backdrop-blur-md border-b border-white/10 px-3 sm:px-6 pt-[calc(0.5rem+env(safe-area-inset-top,0px))] pb-2.5 max-w-full">
+      <div className="max-w-6xl mx-auto flex items-center justify-between gap-2">
         {/* Brand & Target Pill */}
         <div className="flex items-center gap-3">
           <button
@@ -65,22 +66,32 @@ export const Header: React.FC = () => {
 
         {/* Status Indicators & Actions */}
         <div className="flex items-center gap-2 sm:gap-3">
-          {/* Synced Status Pill (Matching Screenshot) */}
+          {/* Synced Status Pill (Matching Screenshot with Offline resilience) */}
           <button
             onClick={triggerManualSync}
-            title={`Sync status: ${syncState}. Click to re-sync.`}
+            title={
+              syncState === 'Offline'
+                ? 'Offline mode: all changes saved locally on this device.'
+                : `Sync status: ${syncState}. Click to re-sync.`
+            }
             className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold border transition-all ${
               syncState === 'Synced'
                 ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20'
                 : syncState === 'Syncing'
                 ? 'bg-sky-500/10 border-sky-500/30 text-sky-400 animate-pulse'
-                : 'bg-amber-500/10 border-amber-500/30 text-amber-400'
+                : 'bg-indigo-500/10 border-indigo-500/30 text-indigo-300 hover:bg-indigo-500/20'
             }`}
           >
-            <CheckCircle2
-              className={`w-3.5 h-3.5 ${syncState === 'Syncing' ? 'animate-spin' : ''}`}
-            />
-            <span className="hidden xs:inline">{syncState}</span>
+            {syncState === 'Offline' ? (
+              <WifiOff className="w-3.5 h-3.5 text-indigo-400" />
+            ) : (
+              <CheckCircle2
+                className={`w-3.5 h-3.5 ${syncState === 'Syncing' ? 'animate-spin' : ''}`}
+              />
+            )}
+            <span className="hidden xs:inline">
+              {syncState === 'Offline' ? 'Offline Ready' : syncState}
+            </span>
           </button>
 
           {/* NEET 2027 Countdown Pill */}

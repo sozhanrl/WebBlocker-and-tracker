@@ -16,48 +16,48 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
   const actions = [
     {
       id: 'focus',
-      label: 'Start Focus',
-      sub: 'Countdown session',
+      label: 'Focus Mode',
+      sub: 'Pomodoro Timer',
       icon: Timer,
       color: 'from-sky-500 to-blue-600',
       glow: 'shadow-sky-500/20',
-      onClick: onOpenFocusModal
+      onClick: () => setActiveTab('focus')
     },
     {
-      id: 'study',
-      label: 'Study Timer',
-      sub: 'NEET Pomodoro',
+      id: 'chapters',
+      label: 'Chapter Planner',
+      sub: '81 NCERT Units',
       icon: BookOpen,
       color: 'from-emerald-500 to-teal-600',
       glow: 'shadow-emerald-500/20',
-      onClick: () => setActiveTab('study')
+      onClick: () => setActiveTab('neet')
     },
     {
-      id: 'block',
-      label: 'Block an App',
-      sub: 'Restrict apps & sites',
+      id: 'checklist',
+      label: 'Daily Checklist',
+      sub: '14-Block Routine',
+      icon: PlusCircle,
+      color: 'from-amber-500 to-orange-600',
+      glow: 'shadow-amber-500/20',
+      onClick: () => setActiveTab('checklists')
+    },
+    {
+      id: 'mocktests',
+      label: 'Mock Tests',
+      sub: '720 Marks (+4/-1)',
+      icon: BarChart3,
+      color: 'from-purple-500 to-indigo-600',
+      glow: 'shadow-purple-500/20',
+      onClick: () => setActiveTab('mocktests')
+    },
+    {
+      id: 'blocker',
+      label: 'Blockers',
+      sub: 'Apps & Websites',
       icon: ShieldAlert,
       color: 'from-rose-500 to-pink-600',
       glow: 'shadow-rose-500/20',
       onClick: () => setActiveTab('blocker')
-    },
-    {
-      id: 'analytics',
-      label: 'View Analytics',
-      sub: 'Charts & trends',
-      icon: BarChart3,
-      color: 'from-purple-500 to-indigo-600',
-      glow: 'shadow-purple-500/20',
-      onClick: () => setActiveTab('analytics')
-    },
-    {
-      id: 'task',
-      label: 'Add Task',
-      sub: 'NEET syllabus item',
-      icon: PlusCircle,
-      color: 'from-amber-500 to-orange-600',
-      glow: 'shadow-amber-500/20',
-      onClick: onOpenAddTaskModal
     }
   ];
 

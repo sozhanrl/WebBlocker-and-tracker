@@ -6,9 +6,16 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "cap:sync": "cap sync android",
+    "cap:open": "cap open android",
+    "build:android": "npm run build && npx cap sync android",
+    "update:blocklist": "npx tsx scripts/fetch-adult-blocklist.ts"
   },
   "dependencies": {
+    "@capacitor/android": "^8.5.2",
+    "@capacitor/cli": "^8.5.2",
+    "@capacitor/core": "^8.5.2",
     "@supabase/supabase-js": "^2.46.1",
     "canvas-confetti": "^1.9.3",
     "clsx": "^2.1.1",

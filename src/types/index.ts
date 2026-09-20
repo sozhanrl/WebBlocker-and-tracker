@@ -59,6 +59,8 @@ export interface BlockedApp {
   dailyLimitMinutes?: number;
   usedTodayMinutes: number;
   iconName: string;
+  iconBase64?: string;
+  isSystemApp?: boolean;
 }
 
 export interface BlockedWebsite {

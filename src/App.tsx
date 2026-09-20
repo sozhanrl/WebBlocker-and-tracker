@@ -30,6 +30,9 @@ import { ProfileScreen } from './components/settings/ProfileScreen';
 import { AuthModal } from './components/settings/AuthModal';
 import { SupabaseConfigModal } from './components/settings/SupabaseConfigModal';
 import { OnboardingFlow } from './components/onboarding/OnboardingFlow';
+import { ChapterPlanner } from './components/ChapterPlanner';
+import { DailyChecklist } from './components/DailyChecklist';
+import { FocusTimer } from './components/FocusTimer';
 import { getGreeting, getFormattedToday } from './utils/formatters';
 import { Card } from './components/common/Card';
 import { Shield, Sparkles, BookOpen, Clock, Play, RotateCw, Target, Award, Calendar } from 'lucide-react';
@@ -48,13 +51,19 @@ export const MainApp: React.FC = () => {
   const [blockerSubTab, setBlockerSubTab] = useState<'apps' | 'websites' | 'schedules'>('apps');
 
   // Sub-tabs for NEET hub page
-  const [neetSubTab, setNeetSubTab] = useState<'syllabus' | 'revision'>('syllabus');
+  const [neetSubTab, setNeetSubTab] = useState<'planner' | 'syllabus' | 'revision'>('planner');
+
+  // Sub-tabs for Checklist & Routine page
+  const [checklistSubTab, setChecklistSubTab] = useState<'timetable' | 'routines' | 'tasks'>('timetable');
+
+  // Sub-tabs for Focus page
+  const [focusSubTab, setFocusSubTab] = useState<'timer' | 'pomodoro'>('timer');
 
   const greeting = getGreeting();
   const todayStr = getFormattedToday();
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#0B132B] text-slate-100 font-sans pb-20 lg:pb-10">
+    <div className="min-h-screen flex flex-col bg-[#0B132B] text-slate-100 font-sans pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))] lg:pb-10 overflow-x-hidden max-w-full">
       {/* Top App Header */}
       <Header />
 
@@ -62,7 +71,7 @@ export const MainApp: React.FC = () => {
       <DesktopNav />
 
       {/* Main View Area */}
-      <main className="flex-1 w-full max-w-6xl mx-auto px-4 sm:px-6 py-5">
+      <main className="flex-1 w-full max-w-6xl mx-auto px-3.5 sm:px-6 py-4 sm:py-5 min-w-0">
         {/* ==================== TAB 1: HOME / DASHBOARD ==================== */}
         {(activeTab === 'home' || activeTab === 'dashboard') && (
           <div className="space-y-5 animate-in fade-in duration-200">
@@ -147,17 +156,55 @@ export const MainApp: React.FC = () => {
           </div>
         )}
 
-        {/* ==================== TAB: TASKS ==================== */}
-        {activeTab === 'tasks' && (
+        {/* ==================== TAB: TASKS / CHECKLIST ROUTINES ==================== */}
+        {(activeTab === 'tasks' || activeTab === 'checklists') && (
           <div className="space-y-5 animate-in fade-in duration-200">
-            <TaskChecklist onOpenAddTaskModal={() => setShowAddTaskModal(true)} />
-          </div>
-        )}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              <div>
+                <h2 className="text-xl font-extrabold text-white">Daily Discipline & Study Checklist</h2>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  14-block college timetable, dedicated routine checklists, and accountability tracking
+                </p>
+              </div>
 
-        {/* ==================== TAB: CHECKLIST ROUTINES (SCREENSHOT MATCH) ==================== */}
-        {activeTab === 'checklists' && (
-          <div className="space-y-5 animate-in fade-in duration-200">
-            <ChecklistRoutinesHub />
+              {/* Sub-Tabs */}
+              <div className="flex items-center gap-1 p-1 bg-slate-900 border border-white/10 rounded-xl">
+                <button
+                  onClick={() => setChecklistSubTab('timetable')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                    checklistSubTab === 'timetable'
+                      ? 'bg-sky-500 text-white shadow-sm'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  14-Block Timetable
+                </button>
+                <button
+                  onClick={() => setChecklistSubTab('routines')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                    checklistSubTab === 'routines'
+                      ? 'bg-sky-500 text-white shadow-sm'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  Routines Hub
+                </button>
+                <button
+                  onClick={() => setChecklistSubTab('tasks')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                    checklistSubTab === 'tasks'
+                      ? 'bg-sky-500 text-white shadow-sm'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  Task Items
+                </button>
+              </div>
+            </div>
+
+            {checklistSubTab === 'timetable' && <DailyChecklist />}
+            {checklistSubTab === 'routines' && <ChecklistRoutinesHub />}
+            {checklistSubTab === 'tasks' && <TaskChecklist onOpenAddTaskModal={() => setShowAddTaskModal(true)} />}
           </div>
         )}
 
@@ -168,18 +215,28 @@ export const MainApp: React.FC = () => {
           </div>
         )}
 
-        {/* ==================== TAB 2: NEET 81-CHAPTER HUB ==================== */}
+        {/* ==================== TAB 2: NEET CHAPTER PLANNER & HUB ==================== */}
         {(activeTab === 'neet' || activeTab === 'study') && (
           <div className="space-y-5 animate-in fade-in duration-200">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
               <div>
                 <h2 className="text-xl font-extrabold text-white">NEET 2027 Syllabus & Revision Hub</h2>
                 <p className="text-xs text-slate-400 mt-0.5">
-                  Complete 81-chapter NCERT checklist, question counters (+4/-1), accuracy tracking & spaced revision
+                  Complete Physics, Chemistry, Botany & Zoology chapter planner, accuracy tracking & spaced revision
                 </p>
               </div>
 
               <div className="flex items-center gap-1 p-1 bg-slate-900 border border-white/10 rounded-xl">
+                <button
+                  onClick={() => setNeetSubTab('planner')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                    neetSubTab === 'planner'
+                      ? 'bg-emerald-500 text-white shadow-sm'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  Chapter Planner
+                </button>
                 <button
                   onClick={() => setNeetSubTab('syllabus')}
                   className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
@@ -188,7 +245,7 @@ export const MainApp: React.FC = () => {
                       : 'text-slate-400 hover:text-white'
                   }`}
                 >
-                  81-Chapter Syllabus
+                  81-Unit Detailed
                 </button>
                 <button
                   onClick={() => setNeetSubTab('revision')}
@@ -203,7 +260,9 @@ export const MainApp: React.FC = () => {
               </div>
             </div>
 
-            {neetSubTab === 'syllabus' ? <NeetChecklistHub /> : <RevisionPlanner />}
+            {neetSubTab === 'planner' && <ChapterPlanner />}
+            {neetSubTab === 'syllabus' && <NeetChecklistHub />}
+            {neetSubTab === 'revision' && <RevisionPlanner />}
           </div>
         )}
 
@@ -217,7 +276,7 @@ export const MainApp: React.FC = () => {
         {/* ==================== TAB 4: FOCUS MODE ==================== */}
         {activeTab === 'focus' && (
           <div className="space-y-5 animate-in fade-in duration-200">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
               <div>
                 <h2 className="text-xl font-extrabold text-white">Focus Mode & Deep Study</h2>
                 <p className="text-xs text-slate-400 mt-0.5">
@@ -225,15 +284,40 @@ export const MainApp: React.FC = () => {
                 </p>
               </div>
 
-              <button
-                onClick={() => setShowFocusModal(true)}
-                className="px-4 py-2 rounded-xl bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-white text-xs font-bold shadow-md shadow-sky-500/20"
-              >
-                Quick Focus Setup
-              </button>
+              <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1 p-1 bg-slate-900 border border-white/10 rounded-xl">
+                  <button
+                    onClick={() => setFocusSubTab('timer')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                      focusSubTab === 'timer'
+                        ? 'bg-sky-500 text-white shadow-sm'
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    Focus Pomodoro
+                  </button>
+                  <button
+                    onClick={() => setFocusSubTab('pomodoro')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                      focusSubTab === 'pomodoro'
+                        ? 'bg-sky-500 text-white shadow-sm'
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    Interval Presets
+                  </button>
+                </div>
+
+                <button
+                  onClick={() => setShowFocusModal(true)}
+                  className="px-4 py-2 rounded-xl bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-white text-xs font-bold shadow-md shadow-sky-500/20"
+                >
+                  Quick Setup
+                </button>
+              </div>
             </div>
 
-            <PomodoroTimer />
+            {focusSubTab === 'timer' ? <FocusTimer /> : <PomodoroTimer />}
           </div>
         )}
 
