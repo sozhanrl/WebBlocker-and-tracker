@@ -14,7 +14,7 @@ import java.util.Locale
  *
  * Coordinates blocking state, 5-warning tracking, 5-minute focus lockout,
  * focus sessions, and event logging across AccessibilityService, VpnService,
- * BlockScreenActivity, FocusTimerService, and the Capacitor JavaScript bridge.
+ * BlockScreenActivity, FocusTimerService, and the JavaScript bridge.
  */
 class BlockingStateManager private constructor(private val context: Context) {
 
@@ -22,7 +22,6 @@ class BlockingStateManager private constructor(private val context: Context) {
         private const val TAG = "BlockingStateManager"
         private const val PREFS_NAME = "focus_blocker_prefs"
 
-        // Default configurations
         const val DEFAULT_MAX_WARNINGS = 5
         const val DEFAULT_LOCKOUT_DURATION_SEC = 300L // 5 minutes
 
@@ -131,11 +130,6 @@ class BlockingStateManager private constructor(private val context: Context) {
     // 1. WARNING & LOCKOUT EVALUATION ENGINE
     // =========================================================================
 
-    /**
-     * Records an access attempt to a blocked target (app, website, or adult website).
-     * Increments the persistent warning counter (1..5).
-     * Upon reaching warning 5, triggers a 5-minute full-screen Focus Lockout.
-     */
     @Synchronized
     fun recordBlockedAttempt(targetType: String, targetId: String, targetName: String): WarningResult {
         checkDailyReset()
@@ -211,9 +205,6 @@ class BlockingStateManager private constructor(private val context: Context) {
         )
     }
 
-    /**
-     * Manually triggers a 5-minute focus lockout for a target.
-     */
     @Synchronized
     fun startFiveMinuteLockout(
         targetType: String,
@@ -249,10 +240,6 @@ class BlockingStateManager private constructor(private val context: Context) {
         )
     }
 
-    /**
-     * Checks whether an active lockout is currently in effect.
-     * Automatically clears expired lockout states.
-     */
     @Synchronized
     fun getLockoutStatus(): LockoutStatus {
         val isFlagActive = prefs.getBoolean("is_lockout_active", false)
@@ -261,7 +248,6 @@ class BlockingStateManager private constructor(private val context: Context) {
 
         if (!isFlagActive || lockoutUntilMs <= now) {
             if (isFlagActive) {
-                // Lockout has naturally expired
                 prefs.edit()
                     .putBoolean("is_lockout_active", false)
                     .putLong("lockout_until_ms", 0L)
@@ -294,9 +280,6 @@ class BlockingStateManager private constructor(private val context: Context) {
         )
     }
 
-    /**
-     * Cancels active lockout if emergency unlock is permitted by configuration.
-     */
     @Synchronized
     fun cancelLockoutIfAllowed(): Boolean {
         val allowEmergency = prefs.getBoolean("allow_emergency_unlock", true)
@@ -316,9 +299,6 @@ class BlockingStateManager private constructor(private val context: Context) {
         return true
     }
 
-    /**
-     * Retrieves warning count and lockout statistics for a specific target.
-     */
     fun getWarningStatus(targetType: String, targetId: String): WarningStatus {
         checkDailyReset()
         val cleanId = targetId.trim().lowercase()
@@ -440,7 +420,6 @@ class BlockingStateManager private constructor(private val context: Context) {
         if (!isBlockingActive && !isFocusActive) return false
         if (isPaused && !isStrict) return false
 
-        // Check temporary emergency unlock expiry
         val emergencyUntil = prefs.getLong("emergency_unlock_until", 0L)
         if (System.currentTimeMillis() < emergencyUntil) {
             return false
@@ -518,7 +497,6 @@ class BlockingStateManager private constructor(private val context: Context) {
                 put("subject", prefs.getString("active_subject_name", "NEET 2027 Study"))
             }
 
-            // Keep max 100 recent events in ring buffer
             if (array.length() >= 100) {
                 val newArray = JSONArray()
                 for (i in (array.length() - 99) until array.length()) {

@@ -157,6 +157,15 @@
             </intent-filter>
         </receiver>
 
+        <!-- Lockdown Receiver: Re-enforces lockdown overlay if user wakes screen during lockout -->
+        <receiver
+            android:name=".receiver.LockdownReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.SCREEN_ON" />
+            </intent-filter>
+        </receiver>
+
         <!-- File Provider for exports -->
         <provider
             android:name="androidx.core.content.FileProvider"

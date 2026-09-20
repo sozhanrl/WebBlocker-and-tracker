@@ -135,6 +135,9 @@ class FocusBlockerPlugin : Plugin() {
                 stateManager.updateBlockedDomains(domainSet)
             }
 
+            val isAdultBlockingEnabled = call.getBoolean("isAdultBlockingEnabled", false) ?: false
+            stateManager.setAdultContentBlockingEnabled(isAdultBlockingEnabled)
+
             prefs.edit()
                 .putBoolean("is_blocking_active", isBlockingActive)
                 .putBoolean("is_strict_mode", isStrict)

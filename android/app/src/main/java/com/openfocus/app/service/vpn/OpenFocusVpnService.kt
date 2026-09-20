@@ -251,6 +251,7 @@ class OpenFocusVpnService : VpnService(), Runnable {
                         addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
                         putExtra(WebsiteBlockedActivity.EXTRA_DOMAIN, domain)
                         putExtra(WebsiteBlockedActivity.EXTRA_STRIKE_COUNT, strikes)
+                        putExtra(WebsiteBlockedActivity.EXTRA_TODAY_COUNT, LockdownManager.getTodayBlockCount(this@OpenFocusVpnService))
                         putExtra(WebsiteBlockedActivity.EXTRA_CATEGORY, "Distracting Website")
                     }
                     startActivity(blockIntent)

@@ -181,10 +181,15 @@ export const FocusTimerProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     setDistractionsPreventedCount(prev => prev + 1);
   };
 
-  // Emergency Unlock logic (30s cooldown before unlocking in strict mode)
+  // Emergency Unlock logic (instant or configured delay)
   const startEmergencyUnlock = () => {
+    const delay = settings.emergencyUnlockDelaySeconds ?? 0;
+    if (delay <= 0) {
+      cancelSession();
+      return;
+    }
     setIsEmergencyUnlocking(true);
-    setEmergencyUnlockSecondsLeft(settings.emergencyUnlockDelaySeconds || 30);
+    setEmergencyUnlockSecondsLeft(delay);
 
     emergencyTimerRef.current = setInterval(() => {
       setEmergencyUnlockSecondsLeft(prev => {
@@ -201,7 +206,7 @@ export const FocusTimerProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const cancelEmergencyUnlock = () => {
     if (emergencyTimerRef.current) clearInterval(emergencyTimerRef.current);
     setIsEmergencyUnlocking(false);
-    setEmergencyUnlockSecondsLeft(30);
+    setEmergencyUnlockSecondsLeft(0);
   };
 
   const closeCompletionModal = () => {

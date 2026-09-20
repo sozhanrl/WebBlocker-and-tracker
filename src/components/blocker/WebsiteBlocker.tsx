@@ -1,43 +1,127 @@
-import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Card } from '../common/Card';
 import { Button } from '../common/Button';
 import { useApp } from '../../context/AppContext';
 import { getNativeBridge, PermissionStatus, isNativePlatform } from '../../lib/nativeBridge';
-import { ADULT_CONTENT_DOMAINS } from '../../lib/adultContentList';
+import {
+  ADULT_18_PLUS_DOMAINS,
+  HENTAI_ANIME_DOMAINS,
+  HENTAI_MANHWA_DOMAINS,
+  HENTAI_MANGA_DOMAINS,
+  DOUJINSHI_DOMAINS,
+  getDomainsForCategories
+} from '../../lib/adultCategories';
 import { PermissionDiagnosticsModal } from '../common/PermissionDiagnosticsModal';
 import {
   Globe,
   Plus,
   Trash2,
-  Shield,
   ShieldCheck,
   ShieldAlert,
   Search,
   Power,
   Info,
-  AlertTriangle,
-  Timer,
-  CheckCircle2,
-  X,
-  Loader2,
   Sliders,
-  Lock,
-  RefreshCw
+  Check,
+  CheckSquare
 } from 'lucide-react';
+
+const ADULT_CATEGORIES = [
+  'Adult Content',
+  '18+ Adult & Porn',
+  'Hentai (Anime & Streaming)',
+  'Hentai Manhwa (Pornhwa 18+)',
+  'Hentai Manga (18+)',
+  'Doujinshi / Dojin (18+)'
+];
+
+interface ChecklistCategoryItem {
+  id: string;
+  category: string;
+  title: string;
+  icon: string;
+  description: string;
+  keyDomains: string[];
+  totalCount: number;
+  badgeClass: string;
+  borderActive: string;
+}
+
+const CHECKLIST_CATEGORIES: ChecklistCategoryItem[] = [
+  {
+    id: 'cat-18plus',
+    category: '18+ Adult & Porn',
+    title: '18+ Adult & Porn blocking',
+    icon: '🔞',
+    description: 'Top adult video/tube, live streaming cams, and explicit portals',
+    keyDomains: ['pornhub.com', 'xvideos.com', 'spankbang.com', 'xnxx.com', 'chaturbate.com'],
+    totalCount: ADULT_18_PLUS_DOMAINS.length,
+    badgeClass: 'bg-rose-500/20 text-rose-300 border-rose-500/30',
+    borderActive: 'border-rose-500/40 bg-rose-950/20'
+  },
+  {
+    id: 'cat-hentai-anime',
+    category: 'Hentai (Anime & Streaming)',
+    title: 'Hentai (Anime & Streaming) blocking',
+    icon: '🌸',
+    description: 'Hentai anime series, streaming hubs, and video archives',
+    keyDomains: ['watchhentai.net', 'hentai20.io', 'hentai20.lol', 'hitomi.la', 'hanime.tv'],
+    totalCount: HENTAI_ANIME_DOMAINS.length,
+    badgeClass: 'bg-fuchsia-500/20 text-fuchsia-300 border-fuchsia-500/30',
+    borderActive: 'border-fuchsia-500/40 bg-fuchsia-950/20'
+  },
+  {
+    id: 'cat-manhwa',
+    category: 'Hentai Manhwa (Pornhwa 18+)',
+    title: 'Hentai Manhwa (Pornhwa 18+) blocking',
+    icon: '🎨',
+    description: 'Adult Korean webtoons, 18+ manhwa, and pornhwa comic websites',
+    keyDomains: ['manytoon.com', 'manhwa18.com', 'toongod.org', 'adultwebtoon.com', 'toonily.com'],
+    totalCount: HENTAI_MANHWA_DOMAINS.length,
+    badgeClass: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
+    borderActive: 'border-amber-500/40 bg-amber-950/20'
+  },
+  {
+    id: 'cat-manga',
+    category: 'Hentai Manga (18+)',
+    title: 'Hentai Manga (18+) blocking',
+    icon: '📖',
+    description: 'Adult Japanese manga, eromanga reader sites, and scanlation archives',
+    keyDomains: ['nhentai.net', 'hentai20.io', 'hentai20.lol', 'hentaimanga.pro', 'hentaifox.com'],
+    totalCount: HENTAI_MANGA_DOMAINS.length,
+    badgeClass: 'bg-violet-500/20 text-violet-300 border-violet-500/30',
+    borderActive: 'border-violet-500/40 bg-violet-950/20'
+  },
+  {
+    id: 'cat-doujin',
+    category: 'Doujinshi / Dojin (18+)',
+    title: 'Doujinshi / Dojin (18+) blocking',
+    icon: '📑',
+    description: 'Top doujin, fan-comics, self-published 18+ doujinshi archives, and galleries',
+    keyDomains: ['hitomi.la', 'doujins.com', 'e-hentai.org', 'tsumino.com', 'doujindesu.tv'],
+    totalCount: DOUJINSHI_DOMAINS.length,
+    badgeClass: 'bg-pink-500/20 text-pink-300 border-pink-500/30',
+    borderActive: 'border-pink-500/40 bg-pink-950/20'
+  }
+];
 
 export const WebsiteBlocker: React.FC = () => {
   const {
     blockedWebsites,
     addBlockedWebsite,
-    bulkAddBlockedWebsites,
-    removeBlockedWebsitesByCategory,
+    removeBlockedWebsitesByCategories,
     removeBlockedWebsite,
-    toggleWebsiteBlocked
+    toggleWebsiteBlocked,
+    selected18PlusCategories,
+    setSelected18PlusCategories,
+    toggle18PlusCategory,
+    isAdultShieldEnabled,
+    setIsAdultShieldEnabled
   } = useApp();
 
   const [url, setUrl] = useState('');
   const [name, setName] = useState('');
-  const [category, setCategory] = useState('Adult Content');
+  const [category, setCategory] = useState('Social Media');
   const [showAddForm, setShowAddForm] = useState(false);
   const [showDiagnostics, setShowDiagnostics] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -50,23 +134,26 @@ export const WebsiteBlocker: React.FC = () => {
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const isNative = isNativePlatform();
 
-  // Adult Content Shield state & 30s unlock cooldown timer
-  const [isShieldUnlocking, setIsShieldUnlocking] = useState(false);
-  const [unlockSecondsLeft, setUnlockSecondsLeft] = useState(30);
-  const [isBulkLoading, setIsBulkLoading] = useState(false);
-  const unlockTimerRef = useRef<any>(null);
-
-  const categories = [
-    'Adult Content',
+  const customCategories = [
     'Social Media',
     'Entertainment',
     'Games',
     'Short Videos',
-    'Manga & Webtoons',
     'News / Surfing',
     'Shopping',
+    'Manga & Webtoons',
     'Other'
   ];
+
+  // Purge any legacy bulk adult domains from blockedWebsites on mount so user's list stays clean
+  useEffect(() => {
+    const hasLegacyBulk = blockedWebsites.some(
+      site => site.id?.startsWith('web-bulk-') || ADULT_CATEGORIES.includes(site.category)
+    );
+    if (hasLegacyBulk) {
+      removeBlockedWebsitesByCategories(ADULT_CATEGORIES);
+    }
+  }, [blockedWebsites, removeBlockedWebsitesByCategories]);
 
   const checkVpnStatus = useCallback(async () => {
     try {
@@ -83,13 +170,6 @@ export const WebsiteBlocker: React.FC = () => {
     const interval = setInterval(checkVpnStatus, 4000);
     return () => clearInterval(interval);
   }, [checkVpnStatus]);
-
-  // Clean up timer on unmount
-  useEffect(() => {
-    return () => {
-      if (unlockTimerRef.current) clearInterval(unlockTimerRef.current);
-    };
-  }, []);
 
   const handleStartVpn = async () => {
     try {
@@ -139,16 +219,16 @@ export const WebsiteBlocker: React.FC = () => {
     return clean;
   };
 
-  const handleAdd = (e: React.FormEvent) => {
+  const handleAddCustom = (e: React.FormEvent) => {
     e.preventDefault();
     if (!url.trim()) {
-      setError('Please enter a website domain (e.g. asurascans.com or youtube.com)');
+      setError('Please enter a website domain (e.g. twitter.com or reddit.com)');
       return;
     }
 
     const cleanDomain = normalizeDomainInput(url);
     if (!cleanDomain.includes('.') || cleanDomain.length < 3) {
-      setError('Please enter a valid domain format (e.g. asurascans.com or instagram.com)');
+      setError('Please enter a valid domain format (e.g. reddit.com)');
       return;
     }
 
@@ -163,82 +243,73 @@ export const WebsiteBlocker: React.FC = () => {
     setName('');
     setShowAddForm(false);
     setError(null);
+    setStatusMessage(`Domain "${cleanDomain}" added and blocked.`);
   };
 
-  // Adult Content Shield Actions
-  const adultBlockedCount = useMemo(() => {
-    return blockedWebsites.filter(w => w.category === 'Adult Content' && w.isBlocked).length;
-  }, [blockedWebsites]);
-
-  const isAdultShieldActive = adultBlockedCount > 0;
-
-  const handleToggleAdultShield = () => {
-    if (isAdultShieldActive) {
-      if (isShieldUnlocking) {
-        cancelShieldUnlock();
-      } else {
-        startShieldUnlock();
-      }
+  // Instant toggle for Master 18+ Shield (ZERO DELAY)
+  const handleToggleMasterShield = () => {
+    const nextState = !isAdultShieldEnabled;
+    setIsAdultShieldEnabled(nextState);
+    if (nextState) {
+      setStatusMessage('18+ & Hentai Shield activated immediately.');
     } else {
-      setIsBulkLoading(true);
-      setTimeout(() => {
-        const payload = ADULT_CONTENT_DOMAINS.map(domain => ({
-          url: domain,
-          name: domain,
-          category: 'Adult Content'
-        }));
-        bulkAddBlockedWebsites(payload);
-        setIsBulkLoading(false);
-        setStatusMessage(`Adult Content Shield active: ${payload.length.toLocaleString()} domains protected.`);
-      }, 50);
+      setStatusMessage('18+ & Hentai Shield deactivated immediately.');
     }
   };
 
-  const startShieldUnlock = () => {
-    setIsShieldUnlocking(true);
-    setUnlockSecondsLeft(30);
-    if (unlockTimerRef.current) clearInterval(unlockTimerRef.current);
-
-    unlockTimerRef.current = setInterval(() => {
-      setUnlockSecondsLeft(prev => {
-        if (prev <= 1) {
-          clearInterval(unlockTimerRef.current!);
-          removeBlockedWebsitesByCategory('Adult Content');
-          setIsShieldUnlocking(false);
-          setStatusMessage('Adult Content Shield deactivated.');
-          return 30;
-        }
-        return prev - 1;
-      });
-    }, 1000);
+  // Checklist Actions (ZERO DELAY)
+  const handleSelectAllCategories = () => {
+    const all = CHECKLIST_CATEGORIES.map(c => c.category);
+    setSelected18PlusCategories(all);
+    if (!isAdultShieldEnabled) {
+      setIsAdultShieldEnabled(true);
+    }
+    setStatusMessage('All 5 18+ categories selected.');
   };
 
-  const cancelShieldUnlock = () => {
-    if (unlockTimerRef.current) clearInterval(unlockTimerRef.current);
-    setIsShieldUnlocking(false);
-    setUnlockSecondsLeft(30);
-    setStatusMessage('Adult Content Shield remains locked and active.');
+  const handleClearAllCategories = () => {
+    setSelected18PlusCategories([]);
+    setStatusMessage('All 18+ categories deselected immediately.');
   };
+
+  // Filter custom websites ONLY - strip out legacy adult bulk items
+  const customWebsites = useMemo(() => {
+    return blockedWebsites.filter(site => {
+      if (!site) return false;
+      if (site.id?.startsWith('web-bulk-')) return false;
+      if (ADULT_CATEGORIES.includes(site.category)) return false;
+      return true;
+    });
+  }, [blockedWebsites]);
+
+  const activeCuratedDomainsCount = useMemo(() => {
+    if (!isAdultShieldEnabled) return 0;
+    return getDomainsForCategories(selected18PlusCategories).length;
+  }, [isAdultShieldEnabled, selected18PlusCategories]);
+
+  const customBlockedCount = useMemo(() => {
+    return customWebsites.filter(w => w.isBlocked).length;
+  }, [customWebsites]);
+
+  const totalProtectedCount = activeCuratedDomainsCount + customBlockedCount;
 
   const isRunning = !!vpnStatus?.isVpnRunning;
   const isGranted = !!vpnStatus?.hasVpnPermission;
-  const blockedCount = blockedWebsites.filter(w => w.isBlocked).length;
 
-  // Authentic statuses per requirement section 11
   const vpnEngineStatus = useMemo(() => {
-    if (!isNative) return 'Web Preview (Simulator)';
+    if (!isNative) return 'Web Simulator';
     if (!vpnStatus?.hasVpnPermission) return 'Permission Required';
     if (vpnStatus.anotherVpnActive) return 'Another VPN Active';
     if (vpnStatus.isVpnStarting) return 'Starting';
     if (vpnStatus.isVpnRunning) {
-      return blockedCount === 0 ? 'No Active Domains' : 'Running';
+      return totalProtectedCount === 0 ? 'No Active Domains' : 'Running';
     }
     if (vpnStatus.lastVpnError) return 'DNS Engine Error';
     return 'Stopped';
-  }, [isNative, vpnStatus, blockedCount]);
+  }, [isNative, vpnStatus, totalProtectedCount]);
 
-  const filteredWebsites = useMemo(() => {
-    return blockedWebsites.filter(site => {
+  const filteredCustomWebsites = useMemo(() => {
+    return customWebsites.filter(site => {
       const matchesSearch =
         site.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         site.url.toLowerCase().includes(searchTerm.toLowerCase());
@@ -246,11 +317,11 @@ export const WebsiteBlocker: React.FC = () => {
         selectedCategoryFilter === 'all' || site.category === selectedCategoryFilter;
       return matchesSearch && matchesCategory;
     });
-  }, [blockedWebsites, searchTerm, selectedCategoryFilter]);
+  }, [customWebsites, searchTerm, selectedCategoryFilter]);
 
-  const visibleWebsites = useMemo(() => {
-    return filteredWebsites.slice(0, displayLimit);
-  }, [filteredWebsites, displayLimit]);
+  const visibleCustomWebsites = useMemo(() => {
+    return filteredCustomWebsites.slice(0, displayLimit);
+  }, [filteredCustomWebsites, displayLimit]);
 
   return (
     <div className="space-y-4 max-w-full pb-12 animate-in fade-in duration-150">
@@ -351,352 +422,491 @@ export const WebsiteBlocker: React.FC = () => {
           </div>
 
           <div className="p-2.5 rounded-xl bg-slate-900/80 border border-white/5 space-y-0.5">
-            <span className="text-[10px] text-slate-400 block font-medium">Active Blocked Domains</span>
+            <span className="text-[10px] text-slate-400 block font-medium">Protected Domains</span>
             <span className="text-xs font-bold text-sky-400">
-              {blockedCount.toLocaleString()} Domains
+              {totalProtectedCount.toLocaleString()} Total
             </span>
           </div>
 
           <div className="p-2.5 rounded-xl bg-slate-900/80 border border-white/5 space-y-0.5">
-            <span className="text-[10px] text-slate-400 block font-medium">Adult Shield</span>
-            <span className={`text-xs font-bold ${isAdultShieldActive ? 'text-emerald-400' : 'text-slate-400'}`}>
-              {isAdultShieldActive ? 'Shield Active' : 'Shield Off'}
+            <span className="text-[10px] text-slate-400 block font-medium">18+ Shield Status</span>
+            <span
+              className={`text-xs font-bold ${
+                isAdultShieldEnabled && selected18PlusCategories.length > 0
+                  ? 'text-rose-400'
+                  : 'text-slate-400'
+              }`}
+            >
+              {isAdultShieldEnabled && selected18PlusCategories.length > 0
+                ? `${selected18PlusCategories.length}/5 Packs Active`
+                : 'Shield Off'}
             </span>
           </div>
         </div>
       </Card>
 
-      {/* Persistent Info Banner Required for DoH / Private DNS */}
+      {/* DNS Notice */}
       <div className="p-3.5 rounded-xl bg-slate-900/80 border border-amber-500/30 flex items-start gap-3 text-xs text-slate-300">
         <Info className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
         <div className="space-y-1">
           <p className="font-bold text-white flex items-center gap-1.5">
-            <span>DNS Filtering Configuration Notice</span>
+            <span>On-Device DNS Sinkhole Filtering</span>
           </p>
           <p className="text-[11px] text-slate-400 leading-relaxed">
-            Uses on-device DNS filtering — for full protection, disable &lsquo;Secure DNS&rsquo; / &lsquo;Private DNS&rsquo; in your browser and Android network settings, since encrypted DNS (DoH/DoT) can bypass local filtering.
+            All configured domains return <code className="text-amber-300 bg-slate-800 px-1 py-0.5 rounded">127.0.0.1</code> locally. For absolute protection, disable &lsquo;Secure DNS&rsquo; / &lsquo;Private DNS&rsquo; in your browser and phone settings.
           </p>
         </div>
       </div>
 
-      {/* Adult Content Shield Card */}
+      {/* ========================================================================= */}
+      {/* SINGLE CONSOLIDATED 18+ & HENTAI SHIELD CARD (WITH SAMURAI ARTWORK & CHECKLIST) */}
+      {/* ========================================================================= */}
       <Card
-        className={`p-4 sm:p-5 border transition-all ${
-          isAdultShieldActive
-            ? 'border-indigo-500/40 bg-gradient-to-br from-[#1C2541] via-[#151D3B] to-[#0B132B]'
+        className={`overflow-hidden border transition-all ${
+          isAdultShieldEnabled && selected18PlusCategories.length > 0
+            ? 'border-rose-500/40 bg-gradient-to-br from-[#1C2541] via-[#1a1429] to-[#0B132B] shadow-lg shadow-rose-950/20'
             : 'border-slate-800 bg-[#1C2541]/70'
         }`}
       >
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="flex items-start gap-3.5 flex-1 min-w-0">
-            <div
-              className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 border transition-colors ${
-                isAdultShieldActive
-                  ? 'bg-indigo-500/20 border-indigo-500/40 text-indigo-400'
-                  : 'bg-slate-900 border-white/10 text-slate-400'
-              }`}
-            >
-              {isAdultShieldActive ? (
-                <ShieldCheck className="w-6 h-6 text-indigo-400" />
-              ) : (
-                <Shield className="w-6 h-6 text-slate-400" />
-              )}
+        {/* Banner with Sekiro Samurai Mascot Artwork */}
+        <div className="relative bg-gradient-to-r from-black via-slate-950 to-rose-950/50 p-4 sm:p-5 border-b border-white/10">
+          <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6">
+            {/* Samurai Mascot Image */}
+            <div className="relative shrink-0 group">
+              <div className="w-24 h-36 sm:w-28 sm:h-44 rounded-xl overflow-hidden border-2 border-rose-500/50 shadow-md shadow-rose-500/20 bg-black flex items-center justify-center">
+                <img
+                  src="/hesitation_is_defeat.png"
+                  alt="Hesitation is Defeat - Sekiro Blocker Mascot"
+                  className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-300"
+                  onError={(e) => {
+                    // Fallback if image path differs
+                    (e.currentTarget as HTMLImageElement).src = '/img_blocker_mascot.jpg';
+                  }}
+                />
+              </div>
+              <div className="absolute -bottom-2 -right-2 bg-rose-600 text-white text-[9px] font-black tracking-wider px-2 py-0.5 rounded-full border border-rose-400 uppercase shadow">
+                死 DEFEAT
+              </div>
             </div>
 
-            <div className="space-y-1 min-w-0 flex-1">
-              <div className="flex items-center gap-2 flex-wrap">
-                <h4 className="text-sm font-bold text-white tracking-tight">
-                  Adult Website Domain Blocking
-                </h4>
+            {/* Mascot Headline & Shield Controls */}
+            <div className="flex-1 min-w-0 text-center sm:text-left space-y-2">
+              <div className="flex items-center justify-center sm:justify-start gap-2 flex-wrap">
+                <span className="text-[10px] font-black uppercase tracking-widest px-2.5 py-0.5 rounded-full bg-rose-500/20 text-rose-400 border border-rose-500/40">
+                  HESITATION IS DEFEAT
+                </span>
                 <span
-                  className={`text-[10px] font-bold px-2 py-0.5 rounded-full border shrink-0 ${
-                    isAdultShieldActive
-                      ? 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30'
+                  className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                    isAdultShieldEnabled && selected18PlusCategories.length > 0
+                      ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
                       : 'bg-slate-800 text-slate-400 border-slate-700'
                   }`}
                 >
-                  {isAdultShieldActive
-                    ? `${adultBlockedCount.toLocaleString()} Curated Domains Active`
-                    : `${ADULT_CONTENT_DOMAINS.length.toLocaleString()} Domains Ready`}
+                  {isAdultShieldEnabled && selected18PlusCategories.length > 0
+                    ? `${activeCuratedDomainsCount} Domains Sinkholed`
+                    : 'Shield Disabled'}
                 </span>
               </div>
-              <p className="text-xs text-slate-400 leading-relaxed">
-                Blocks known adult, pornographic, and explicit domains via on-device loopback DNS sinkhole.
-                Disabling requires a mandatory 30-second delay to safeguard study focus.
+
+              <h3 className="text-lg sm:text-xl font-extrabold text-white tracking-tight flex items-center justify-center sm:justify-start gap-2">
+                <ShieldCheck className="w-5 h-5 text-rose-400 shrink-0" />
+                <span>18+ Adult &amp; Hentai Content Shield</span>
+              </h3>
+
+              <p className="text-xs text-slate-300 leading-relaxed max-w-xl">
+                Single-card checklist selector. Zero relapse protection across adult tubes, hentai anime streaming, 18+ manhwa, manga, and doujinshi archives. Toggles execute instantly with zero delay.
+              </p>
+
+              {/* Master Switch Row */}
+              <div className="pt-2 flex flex-wrap items-center justify-center sm:justify-start gap-3">
+                <button
+                  type="button"
+                  onClick={handleToggleMasterShield}
+                  className={`inline-flex items-center gap-2.5 px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-sm ${
+                    isAdultShieldEnabled
+                      ? 'bg-rose-600 hover:bg-rose-500 text-white shadow-rose-600/30'
+                      : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700'
+                  }`}
+                  title={isAdultShieldEnabled ? 'Disable 18+ Shield' : 'Enable 18+ Shield'}
+                >
+                  <Power className="w-4 h-4" />
+                  <span>{isAdultShieldEnabled ? '18+ Shield ACTIVE (Click to Turn Off)' : 'Turn ON 18+ Shield'}</span>
+                </button>
+
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleSelectAllCategories}
+                    className="text-xs text-rose-300 hover:bg-rose-500/10 px-2.5 py-1"
+                  >
+                    Select All
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleClearAllCategories}
+                    className="text-xs text-slate-400 hover:bg-slate-800 px-2.5 py-1"
+                  >
+                    Clear All
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* The 5 Checklist Items in a Single Clean Section */}
+        <div className="p-4 sm:p-5 space-y-3">
+          <div className="flex items-center justify-between">
+            <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+              <CheckSquare className="w-4 h-4 text-rose-400" />
+              <span>18+ Category Selector Checklist</span>
+            </h4>
+            <span className="text-[11px] text-slate-400">
+              {selected18PlusCategories.length} of {CHECKLIST_CATEGORIES.length} selected
+            </span>
+          </div>
+
+          <div className="space-y-2">
+            {CHECKLIST_CATEGORIES.map(cat => {
+              const isChecked = selected18PlusCategories.includes(cat.category);
+              const isEffectivelyActive = isAdultShieldEnabled && isChecked;
+
+              return (
+                <div
+                  key={cat.id}
+                  onClick={() => toggle18PlusCategory(cat.category)}
+                  className={`p-3 sm:p-3.5 rounded-xl border cursor-pointer transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
+                    isEffectivelyActive
+                      ? `${cat.borderActive} shadow-sm`
+                      : 'border-slate-800 bg-slate-900/60 hover:bg-slate-900 hover:border-slate-700'
+                  }`}
+                  role="checkbox"
+                  aria-checked={isChecked}
+                  tabIndex={0}
+                >
+                  {/* Left: Checkbox + Icon + Title + Subtext */}
+                  <div className="flex items-start gap-3 min-w-0 flex-1">
+                    <div className="mt-0.5 shrink-0">
+                      {isChecked ? (
+                        <div className="w-5 h-5 rounded-md bg-rose-600 text-white flex items-center justify-center shadow">
+                          <Check className="w-3.5 h-3.5 stroke-[3]" />
+                        </div>
+                      ) : (
+                        <div className="w-5 h-5 rounded-md border-2 border-slate-600 bg-slate-800/80 hover:border-slate-400 transition-colors" />
+                      )}
+                    </div>
+
+                    <span className="text-2xl select-none shrink-0 -mt-0.5">{cat.icon}</span>
+
+                    <div className="min-w-0 flex-1 space-y-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-xs sm:text-sm font-bold text-white tracking-tight">
+                          {cat.title}
+                        </span>
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${cat.badgeClass}`}>
+                          {cat.totalCount} Domains
+                        </span>
+                        {isEffectivelyActive && (
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                            Active
+                          </span>
+                        )}
+                      </div>
+
+                      <p className="text-[11px] text-slate-400 leading-snug">
+                        {cat.description}
+                      </p>
+
+                      {/* Explicit Key Domain Chips (including hentai20.io, hentai20.lol, hitomi.la, watchhentai.net) */}
+                      <div className="flex flex-wrap gap-1.5 pt-1">
+                        {cat.keyDomains.map(d => (
+                          <span
+                            key={d}
+                            className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-950/80 border border-white/5 text-slate-300"
+                          >
+                            {d}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Right: Instant Toggle Switch */}
+                  <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-white/5">
+                    <span className={`text-[11px] font-semibold ${isEffectivelyActive ? 'text-rose-400' : 'text-slate-500'}`}>
+                      {isEffectivelyActive ? 'Blocked' : 'Unchecked'}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggle18PlusCategory(cat.category);
+                      }}
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${
+                        isChecked ? 'bg-rose-600' : 'bg-slate-700'
+                      }`}
+                      title={isChecked ? `Uncheck ${cat.category}` : `Check ${cat.category}`}
+                    >
+                      <span
+                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                          isChecked ? 'translate-x-6' : 'translate-x-1'
+                        }`}
+                      />
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Smart Keyword Guard Callout */}
+          <div className="p-3.5 rounded-xl bg-slate-900/90 border border-rose-500/20 flex items-start gap-3 text-xs text-slate-300 mt-2">
+            <ShieldAlert className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
+            <div className="space-y-1">
+              <p className="font-bold text-white flex items-center gap-1.5">
+                <span>Smart On-Device Wildcard Keyword Guard</span>
+              </p>
+              <p className="text-[11px] text-slate-400 leading-relaxed">
+                When 18+ Shield is active, any browser URL containing keywords (such as <code className="text-rose-300 bg-slate-800 px-1 py-0.5 rounded">hentai</code>, <code className="text-rose-300 bg-slate-800 px-1 py-0.5 rounded">manhwa18</code>, <code className="text-rose-300 bg-slate-800 px-1 py-0.5 rounded">manga18</code>, <code className="text-rose-300 bg-slate-800 px-1 py-0.5 rounded">pornhwa</code>, <code className="text-rose-300 bg-slate-800 px-1 py-0.5 rounded">doujin</code>, <code className="text-rose-300 bg-slate-800 px-1 py-0.5 rounded">dojin</code>, <code className="text-rose-300 bg-slate-800 px-1 py-0.5 rounded">porn</code>, <code className="text-rose-300 bg-slate-800 px-1 py-0.5 rounded">xxx</code>) is immediately intercepted and blocked, neutralizing mirror sites automatically.
               </p>
             </div>
           </div>
-
-          <div className="flex items-center gap-3 shrink-0 self-end sm:self-center">
-            {isBulkLoading ? (
-              <div className="flex items-center gap-2 text-xs text-indigo-400">
-                <Loader2 className="w-4 h-4 animate-spin" />
-                <span>Applying Blocklist...</span>
-              </div>
-            ) : (
-              <button
-                type="button"
-                onClick={handleToggleAdultShield}
-                disabled={isBulkLoading}
-                className={`relative inline-flex h-7 w-14 items-center rounded-full transition-colors focus:outline-none ${
-                  isAdultShieldActive ? 'bg-indigo-600' : 'bg-slate-700'
-                }`}
-                title={isAdultShieldActive ? 'Disable Adult Content Shield' : 'Enable Adult Content Shield'}
-              >
-                <span
-                  className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${
-                    isAdultShieldActive ? 'translate-x-8' : 'translate-x-1'
-                  }`}
-                />
-              </button>
-            )}
-          </div>
         </div>
-
-        {/* 30-Second Unlock Countdown Confirmation Banner */}
-        {isShieldUnlocking && (
-          <div className="mt-4 p-3.5 rounded-xl bg-rose-500/15 border border-rose-500/40 space-y-3 animate-in fade-in slide-in-from-top-2 duration-200">
-            <div className="flex items-start justify-between gap-3">
-              <div className="flex items-start gap-2.5">
-                <AlertTriangle className="w-5 h-5 text-rose-400 shrink-0 mt-0.5 animate-bounce" />
-                <div>
-                  <h5 className="text-xs font-bold text-rose-300 flex items-center gap-1.5">
-                    <Timer className="w-4 h-4" />
-                    <span>Disabling Adult Shield in {unlockSecondsLeft}s</span>
-                  </h5>
-                  <p className="text-[11px] text-slate-300 mt-0.5">
-                    Mandatory 30-second pause to prevent impulsive unlocking. Adult filter will remain active until timer completes.
-                  </p>
-                </div>
-              </div>
-
-              <Button
-                variant="primary"
-                size="sm"
-                onClick={cancelShieldUnlock}
-                icon={<X className="w-3.5 h-3.5" />}
-                className="text-xs shrink-0 bg-emerald-600 hover:bg-emerald-500 border-none text-white font-bold"
-              >
-                Keep Shield Active
-              </Button>
-            </div>
-
-            {/* Visual Countdown Progress Bar */}
-            <div className="w-full bg-slate-900/80 rounded-full h-2 overflow-hidden border border-white/5">
-              <div
-                className="bg-rose-500 h-full transition-all duration-1000 ease-linear rounded-full"
-                style={{ width: `${Math.round((unlockSecondsLeft / 30) * 100)}%` }}
-              />
-            </div>
-          </div>
-        )}
       </Card>
 
-      {/* Add Website Form */}
-      {showAddForm && (
-        <Card className="p-4 sm:p-5 border-sky-500/30 animate-in fade-in duration-150">
-          <h4 className="text-sm font-bold text-white mb-3">Add Custom Domain to Filter</h4>
-          <form onSubmit={handleAdd} className="space-y-3">
-            {error && <p className="text-xs text-rose-400">{error}</p>}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div>
-                <label className="text-[11px] font-semibold text-slate-300 block mb-1">Domain Name *</label>
-                <input
-                  type="text"
-                  placeholder="e.g. asurascans.com or youtube.com"
-                  value={url}
-                  onChange={e => setUrl(e.target.value)}
-                  className="w-full px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-700 text-white text-xs focus:outline-none focus:border-sky-500"
-                />
-              </div>
-
-              <div>
-                <label className="text-[11px] font-semibold text-slate-300 block mb-1">Friendly Label</label>
-                <input
-                  type="text"
-                  placeholder="e.g. Asura Scans"
-                  value={name}
-                  onChange={e => setName(e.target.value)}
-                  className="w-full px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-700 text-white text-xs focus:outline-none focus:border-sky-500"
-                />
-              </div>
-
-              <div>
-                <label className="text-[11px] font-semibold text-slate-300 block mb-1">Category</label>
-                <select
-                  value={category}
-                  onChange={e => setCategory(e.target.value)}
-                  className="w-full px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-700 text-white text-xs focus:outline-none focus:border-sky-500"
-                >
-                  {categories.map(c => (
-                    <option key={c} value={c}>
-                      {c}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            <div className="flex justify-end gap-2 pt-2">
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowAddForm(false)}
-              >
-                Cancel
-              </Button>
-              <Button type="submit" variant="primary" size="sm">
-                Add to Blocklist
-              </Button>
-            </div>
-          </form>
-        </Card>
-      )}
-
-      {/* Filter and Search Bar */}
-      {blockedWebsites.length > 0 && (
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-          <div className="relative flex-1">
-            <Search className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
-            <input
-              type="text"
-              placeholder="Search blocked domains..."
-              value={searchTerm}
-              onChange={e => {
-                setSearchTerm(e.target.value);
-                setDisplayLimit(50);
-              }}
-              className="w-full pl-9 pr-4 py-2 rounded-xl bg-slate-900 border border-slate-700 text-white text-xs focus:outline-none focus:border-sky-500"
-            />
+      {/* ========================================================================= */}
+      {/* CUSTOM DOMAINS BLOCKLIST (CLEAN LIST - USER ADDED ONLY) */}
+      {/* ========================================================================= */}
+      <div className="space-y-3 pt-2">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 px-1">
+          <div>
+            <h3 className="text-sm font-bold text-white flex items-center gap-2">
+              <Globe className="w-4 h-4 text-sky-400" />
+              <span>Custom Website Filters</span>
+            </h3>
+            <p className="text-[11px] text-slate-400">
+              Specific distracting domains added by you (e.g. social media, games, news).
+            </p>
           </div>
 
-          <select
-            value={selectedCategoryFilter}
-            onChange={e => {
-              setSelectedCategoryFilter(e.target.value);
-              setDisplayLimit(50);
-            }}
-            className="px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-white text-xs focus:outline-none focus:border-sky-500 shrink-0"
+          <Button
+            onClick={() => setShowAddForm(!showAddForm)}
+            size="sm"
+            variant="secondary"
+            icon={<Plus className="w-3.5 h-3.5" />}
+            className="text-xs self-start sm:self-auto"
           >
-            <option value="all">All Categories ({blockedWebsites.length.toLocaleString()})</option>
-            {categories.map(cat => {
-              const count = blockedWebsites.filter(w => w.category === cat).length;
-              return (
-                <option key={cat} value={cat}>
-                  {cat} ({count.toLocaleString()})
-                </option>
-              );
-            })}
-          </select>
+            Add Custom Domain
+          </Button>
         </div>
-      )}
 
-      {/* Website Domain List */}
-      <div className="space-y-2.5 max-w-full">
-        {blockedWebsites.length === 0 ? (
-          <Card className="p-8 text-center space-y-2">
-            <Globe className="w-10 h-10 text-slate-500 mx-auto" />
-            <p className="text-sm font-bold text-slate-300">No website domains configured</p>
-            <p className="text-xs text-slate-500">
-              Tap &ldquo;Add Domain&rdquo; or enable &ldquo;Adult Content Shield&rdquo; to start filtering distracting websites.
-            </p>
-          </Card>
-        ) : filteredWebsites.length === 0 ? (
-          <Card className="p-6 text-center space-y-2">
-            <p className="text-xs text-slate-400">No domains match your search or filter</p>
-          </Card>
-        ) : (
-          <>
-            <div className="flex items-center justify-between text-xs text-slate-400 px-1">
-              <span>
-                Showing {Math.min(visibleWebsites.length, filteredWebsites.length)} of {filteredWebsites.length.toLocaleString()} domains
-              </span>
-              {selectedCategoryFilter !== 'all' && (
-                <button
-                  onClick={() => setSelectedCategoryFilter('all')}
-                  className="text-sky-400 hover:underline text-[11px]"
-                >
-                  Clear filter
-                </button>
-              )}
-            </div>
-
-            {visibleWebsites.map(site => (
-              <Card
-                key={site.id}
-                className={`p-3.5 sm:p-4 flex items-center justify-between gap-3 transition-all min-w-0 ${
-                  site.isBlocked
-                    ? 'border-rose-500/30 bg-[#1C2541]/95 shadow-sm'
-                    : 'bg-[#1C2541]/70 opacity-70 hover:opacity-100'
-                }`}
-              >
-                <div className="flex items-center gap-3 min-w-0 flex-1">
-                  <div className="w-10 h-10 rounded-xl bg-slate-900 border border-white/10 flex items-center justify-center shrink-0">
-                    {site.category === 'Adult Content' ? (
-                      <Shield className="w-5 h-5 text-indigo-400" />
-                    ) : (
-                      <Globe className="w-5 h-5 text-sky-400" />
-                    )}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2 flex-wrap min-w-0">
-                      <span className="text-sm font-bold text-white truncate max-w-[180px] sm:max-w-xs block">
-                        {site.name}
-                      </span>
-                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 border border-white/5 font-medium shrink-0">
-                        {site.category}
-                      </span>
-                      {site.isBlocked && isRunning && (
-                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-bold shrink-0">
-                          Sinkholed
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-[11px] text-slate-400 font-mono truncate max-w-full block opacity-75">
-                      {site.url}
-                    </p>
-                  </div>
+        {/* Add Website Form */}
+        {showAddForm && (
+          <Card className="p-4 sm:p-5 border-sky-500/30 animate-in fade-in duration-150">
+            <h4 className="text-sm font-bold text-white mb-3">Add Custom Website Domain</h4>
+            <form onSubmit={handleAddCustom} className="space-y-3">
+              {error && <p className="text-xs text-rose-400">{error}</p>}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <label className="text-[11px] font-semibold text-slate-300 block mb-1">Domain Name *</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. reddit.com or twitter.com"
+                    value={url}
+                    onChange={e => setUrl(e.target.value)}
+                    className="w-full px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-700 text-white text-xs focus:outline-none focus:border-sky-500"
+                  />
                 </div>
 
-                <div className="flex items-center gap-2 shrink-0">
-                  <button
-                    type="button"
-                    onClick={() => toggleWebsiteBlocked(site.id)}
-                    className={`w-12 h-6 flex items-center rounded-full p-1 transition-colors ${
-                      site.isBlocked ? 'bg-rose-500 justify-end' : 'bg-slate-700 justify-start'
-                    }`}
-                    title={site.isBlocked ? 'Unblock domain' : 'Block domain'}
-                  >
-                    <span className="w-4 h-4 rounded-full bg-white shadow-md transform transition-transform" />
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => removeBlockedWebsite(site.id)}
-                    className="p-2 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-slate-800/80 transition-colors"
-                    title="Delete domain"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+                <div>
+                  <label className="text-[11px] font-semibold text-slate-300 block mb-1">Friendly Label</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Reddit Frontpage"
+                    value={name}
+                    onChange={e => setName(e.target.value)}
+                    className="w-full px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-700 text-white text-xs focus:outline-none focus:border-sky-500"
+                  />
                 </div>
-              </Card>
-            ))}
 
-            {filteredWebsites.length > displayLimit && (
-              <div className="text-center pt-2">
+                <div>
+                  <label className="text-[11px] font-semibold text-slate-300 block mb-1">Category</label>
+                  <select
+                    value={category}
+                    onChange={e => setCategory(e.target.value)}
+                    className="w-full px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-700 text-white text-xs focus:outline-none focus:border-sky-500"
+                  >
+                    {customCategories.map(c => (
+                      <option key={c} value={c}>
+                        {c}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2">
                 <Button
-                  variant="secondary"
+                  type="button"
+                  variant="ghost"
                   size="sm"
-                  onClick={() => setDisplayLimit(prev => prev + 50)}
-                  className="text-xs"
+                  onClick={() => setShowAddForm(false)}
                 >
-                  Load More Domains (+50)
+                  Cancel
+                </Button>
+                <Button type="submit" variant="primary" size="sm">
+                  Add Domain
                 </Button>
               </div>
-            )}
-          </>
+            </form>
+          </Card>
         )}
+
+        {/* Search & Filter Bar */}
+        {customWebsites.length > 0 && (
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+            <div className="relative flex-1">
+              <Search className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
+              <input
+                type="text"
+                placeholder="Search custom domains..."
+                value={searchTerm}
+                onChange={e => {
+                  setSearchTerm(e.target.value);
+                  setDisplayLimit(50);
+                }}
+                className="w-full pl-9 pr-4 py-2 rounded-xl bg-slate-900 border border-slate-700 text-white text-xs focus:outline-none focus:border-sky-500"
+              />
+            </div>
+
+            <select
+              value={selectedCategoryFilter}
+              onChange={e => {
+                setSelectedCategoryFilter(e.target.value);
+                setDisplayLimit(50);
+              }}
+              className="px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-white text-xs focus:outline-none focus:border-sky-500 shrink-0"
+            >
+              <option value="all">All Categories ({customWebsites.length})</option>
+              {customCategories.map(cat => {
+                const count = customWebsites.filter(w => w.category === cat).length;
+                if (count === 0) return null;
+                return (
+                  <option key={cat} value={cat}>
+                    {cat} ({count})
+                  </option>
+                );
+              })}
+            </select>
+          </div>
+        )}
+
+        {/* Custom Domains Cards List */}
+        <div className="space-y-2.5 max-w-full">
+          {customWebsites.length === 0 ? (
+            <Card className="p-8 text-center space-y-2 border-dashed border-slate-800">
+              <Globe className="w-10 h-10 text-slate-600 mx-auto" />
+              <p className="text-sm font-bold text-slate-300">No Custom Domains Added</p>
+              <p className="text-xs text-slate-500 max-w-md mx-auto">
+                Adult content is safely managed by the single 18+ checklist above. Use &ldquo;Add Custom Domain&rdquo; to block other specific websites like social media or games.
+              </p>
+            </Card>
+          ) : filteredCustomWebsites.length === 0 ? (
+            <Card className="p-6 text-center space-y-2">
+              <p className="text-xs text-slate-400">No domains match your search or filter</p>
+            </Card>
+          ) : (
+            <>
+              <div className="flex items-center justify-between text-xs text-slate-400 px-1">
+                <span>
+                  Showing {Math.min(visibleCustomWebsites.length, filteredCustomWebsites.length)} of {filteredCustomWebsites.length} custom domains
+                </span>
+                {selectedCategoryFilter !== 'all' && (
+                  <button
+                    onClick={() => setSelectedCategoryFilter('all')}
+                    className="text-sky-400 hover:underline text-[11px]"
+                  >
+                    Clear filter
+                  </button>
+                )}
+              </div>
+
+              {visibleCustomWebsites.map(site => (
+                <Card
+                  key={site.id}
+                  className={`p-3.5 sm:p-4 flex items-center justify-between gap-3 transition-all min-w-0 ${
+                    site.isBlocked
+                      ? 'border-rose-500/30 bg-[#1C2541]/95 shadow-sm'
+                      : 'bg-[#1C2541]/70 opacity-70 hover:opacity-100'
+                  }`}
+                >
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                    <div className="w-10 h-10 rounded-xl bg-slate-900 border border-white/10 flex items-center justify-center shrink-0">
+                      <Globe className="w-5 h-5 text-sky-400" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 flex-wrap min-w-0">
+                        <span className="text-sm font-bold text-white truncate max-w-[180px] sm:max-w-xs block">
+                          {site.name}
+                        </span>
+                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 border border-white/5 font-medium shrink-0">
+                          {site.category}
+                        </span>
+                        {site.isBlocked && isRunning && (
+                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-bold shrink-0">
+                            Sinkholed
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-[11px] text-slate-400 font-mono truncate max-w-full block opacity-75">
+                        {site.url}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 shrink-0">
+                    {/* Instant Toggle Switch - ZERO 30s TIMER */}
+                    <button
+                      type="button"
+                      onClick={() => toggleWebsiteBlocked(site.id)}
+                      className={`w-12 h-6 flex items-center rounded-full p-1 transition-colors ${
+                        site.isBlocked ? 'bg-rose-500 justify-end' : 'bg-slate-700 justify-start'
+                      }`}
+                      title={site.isBlocked ? 'Unblock domain immediately' : 'Block domain immediately'}
+                    >
+                      <span className="w-4 h-4 rounded-full bg-white shadow-md transform transition-transform" />
+                    </button>
+
+                    {/* Instant Delete Button - ZERO 30s TIMER */}
+                    <button
+                      type="button"
+                      onClick={() => removeBlockedWebsite(site.id)}
+                      className="p-2 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-slate-800/80 transition-colors"
+                      title="Delete domain"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </Card>
+              ))}
+
+              {filteredCustomWebsites.length > displayLimit && (
+                <div className="text-center pt-2">
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => setDisplayLimit(prev => prev + 50)}
+                    className="text-xs"
+                  >
+                    Load More Domains (+50)
+                  </Button>
+                </div>
+              )}
+            </>
+          )}
+        </div>
       </div>
 
       {/* Diagnostics Modal */}

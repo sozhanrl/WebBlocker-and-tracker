@@ -27,6 +27,7 @@ import {
 } from '../types';
 import { StorageEngine } from '../lib/storage';
 import { getNativeBridge } from '../lib/nativeBridge';
+import { getDomainsForCategories } from '../lib/adultCategories';
 
 export type NavigationTab =
   | 'home'
@@ -80,8 +81,17 @@ interface AppContextType {
   addBlockedWebsite: (url: string, name: string, category: string) => void;
   bulkAddBlockedWebsites: (sites: { url: string; name: string; category: string }[]) => void;
   removeBlockedWebsitesByCategory: (category: string) => void;
+  removeBlockedWebsitesByCategories: (categories: string[]) => void;
   removeBlockedWebsite: (id: string) => void;
   toggleWebsiteBlocked: (id: string) => void;
+
+  // 18+ Adult & Hentai Shield State & Checklist
+  selected18PlusCategories: string[];
+  setSelected18PlusCategories: (categories: string[]) => void;
+  toggle18PlusCategory: (category: string) => void;
+  isAdultShieldEnabled: boolean;
+  setIsAdultShieldEnabled: (enabled: boolean) => void;
+
   schedules: BlockingSchedule[];
   toggleSchedule: (id: string) => void;
   addSchedule: (schedule: Omit<BlockingSchedule, 'id'>) => void;
@@ -170,6 +180,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [calendarEvents, setCalendarEventsState] = useState<CalendarEvent[]>(StorageEngine.getCalendarEvents());
   const [blockedApps, setBlockedAppsState] = useState<BlockedApp[]>(StorageEngine.getBlockedApps());
   const [blockedWebsites, setBlockedWebsitesState] = useState<BlockedWebsite[]>(StorageEngine.getBlockedWebsites());
+  const [selected18PlusCategories, setSelected18PlusCategoriesState] = useState<string[]>(StorageEngine.getSelected18PlusCategories());
+  const [isAdultShieldEnabled, setIsAdultShieldEnabledState] = useState<boolean>(StorageEngine.getIsAdultShieldEnabled());
   const [schedules, setSchedulesState] = useState<BlockingSchedule[]>(StorageEngine.getSchedules());
   const [neetChapters, setNeetChaptersState] = useState<NeetChapter[]>(StorageEngine.getNeetChapters());
   const [weeklyTargets, setWeeklyTargetsState] = useState<WeeklyNeetTarget[]>(StorageEngine.getWeeklyTargets());
@@ -242,20 +254,44 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, [settings.isDarkMode]);
 
   // Sync blocked apps and domains with Android native Accessibility & VPN services
-  // NOTE: This reactive sync effect automatically picks up bulk domain additions and category deletions
-  // from blockedWebsites, forwarding the complete domain set to the native bridge updateBlockList()
-  // which saves it to Android's SharedPreferences ('blocked_domains') for OpenFocusVpnService DNS sinkhole.
+  // NOTE: Automatically merges user's custom domains with curated 18+ domains from selected18PlusCategories,
+  // without polluting the custom domain cards list.
   useEffect(() => {
     const activePkgs = blockedApps.filter(a => a.isBlocked).map(a => a.packageName);
-    const activeDomains = blockedWebsites.filter(w => w.isBlocked).map(w => w.url);
+    const customDomains = blockedWebsites.filter(w => w.isBlocked).map(w => w.url);
+    const adultDomains = isAdultShieldEnabled ? getDomainsForCategories(selected18PlusCategories) : [];
+    const allDomains = Array.from(new Set([...customDomains, ...adultDomains]));
+    const hasAdultActive = isAdultShieldEnabled && selected18PlusCategories.length > 0;
+
     getNativeBridge().updateBlockList({
       blockedPackages: activePkgs,
-      blockedDomains: activeDomains,
+      blockedDomains: allDomains,
       isStrict: false,
       allowEmergencyUnlock: true,
-      activeSubject: 'NEET 2027 Preparation'
+      activeSubject: 'NEET 2027 Preparation',
+      isAdultBlockingEnabled: hasAdultActive
     }).catch(() => {});
-  }, [blockedApps, blockedWebsites]);
+  }, [blockedApps, blockedWebsites, isAdultShieldEnabled, selected18PlusCategories]);
+
+  const setSelected18PlusCategories = (categories: string[]) => {
+    setSelected18PlusCategoriesState(categories);
+    StorageEngine.setSelected18PlusCategories(categories);
+  };
+
+  const setIsAdultShieldEnabled = (enabled: boolean) => {
+    setIsAdultShieldEnabledState(enabled);
+    StorageEngine.setIsAdultShieldEnabled(enabled);
+  };
+
+  const toggle18PlusCategory = (category: string) => {
+    setSelected18PlusCategoriesState(prev => {
+      const next = prev.includes(category)
+        ? prev.filter(c => c !== category)
+        : [...prev, category];
+      StorageEngine.setSelected18PlusCategories(next);
+      return next;
+    });
+  };
 
   // Profile actions
   const updateUserProfile = (updated: Partial<UserProfile>) => {
@@ -340,6 +376,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const removeBlockedWebsitesByCategory = (category: string) => {
     setBlockedWebsitesState(prev => {
       const next = prev.filter(w => w.category !== category);
+      StorageEngine.setBlockedWebsites(next);
+      return next;
+    });
+  };
+
+  const removeBlockedWebsitesByCategories = (categories: string[]) => {
+    const catSet = new Set(categories);
+    setBlockedWebsitesState(prev => {
+      const next = prev.filter(w => !catSet.has(w.category));
       StorageEngine.setBlockedWebsites(next);
       return next;
     });
@@ -917,8 +962,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         addBlockedWebsite,
         bulkAddBlockedWebsites,
         removeBlockedWebsitesByCategory,
+        removeBlockedWebsitesByCategories,
         removeBlockedWebsite,
         toggleWebsiteBlocked,
+        selected18PlusCategories,
+        setSelected18PlusCategories,
+        toggle18PlusCategory,
+        isAdultShieldEnabled,
+        setIsAdultShieldEnabled,
         schedules,
         toggleSchedule,
         addSchedule,

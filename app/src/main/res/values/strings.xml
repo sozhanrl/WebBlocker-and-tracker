@@ -77,5 +77,9 @@
     <string name="cd_add_item">Add item</string>
     <string name="cd_delete_item">Delete item</string>
     <string name="cd_edit_item">Edit item</string>
-    <string name="cd_toggle_item">Toggle item</string>
+    <!-- Device Admin Strings -->
+    <string name="device_admin_label">FocusForge 5-Strike Lockdown</string>
+    <string name="device_admin_description">Used exclusively to instantly lock the screen for 5 minutes when a student attempts to open the same blocked app or website 5 times during focus sessions.</string>
+    <string name="focus_notification_channel_name">Focus Timer Notifications</string>
+    <string name="focus_notification_channel_desc">Active NEET 2027 study session countdown and blocker enforcement notifications</string>
 </resources>

@@ -69,6 +69,8 @@ fun OpenFocusNavHost(modifier: Modifier = Modifier) {
 
                 webChromeClient = WebChromeClient()
 
+                addJavascriptInterface(com.openfocus.app.bridge.AndroidFocusBridge(context), "AndroidBridge")
+
                 loadUrl("https://appassets.androidplatform.net/assets/public/index.html")
                 webViewRef = this
             }

@@ -100,6 +100,7 @@ export interface FocusBlockerPluginInterface {
     allowEmergencyUnlock?: boolean;
     activeSubject?: string;
     isBlockingActive?: boolean;
+    isAdultBlockingEnabled?: boolean;
   }): Promise<{ success: boolean }>;
   updateBlockedApps(options: { blockedPackages: string[] }): Promise<{ success: boolean }>;
   updateBlockedDomains(options: { blockedDomains: string[] }): Promise<{ success: boolean }>;
@@ -228,10 +229,316 @@ const FocusBlocker = registerPlugin<FocusBlockerPluginInterface>('FocusBlocker',
   })
 });
 
+// Android JavaScript Interface adapter for native WebView
+class AndroidBridgeAdapter implements FocusBlockerPluginInterface {
+  private bridge: any;
+
+  constructor() {
+    this.bridge = (window as any).AndroidBridge;
+  }
+
+  private safeParse<T>(jsonStr: any, fallback: T): T {
+    if (typeof jsonStr !== 'string') return jsonStr || fallback;
+    try {
+      return JSON.parse(jsonStr) as T;
+    } catch {
+      return fallback;
+    }
+  }
+
+  async isNative(): Promise<{ isNative: boolean; platform: string }> {
+    if (this.bridge?.isNative) {
+      return this.safeParse(this.bridge.isNative(), { isNative: true, platform: 'android' });
+    }
+    return { isNative: true, platform: 'android' };
+  }
+
+  async getInstalledApps(options?: { includeSystemApps?: boolean }): Promise<{ apps: InstalledApp[] }> {
+    if (this.bridge?.getInstalledApps) {
+      return this.safeParse(this.bridge.getInstalledApps(options?.includeSystemApps ?? false), { apps: [] });
+    }
+    return { apps: [] };
+  }
+
+  async getUsageStats(options: { startTimeMs: number; endTimeMs: number }): Promise<{ stats: AppUsageStat[] }> {
+    if (this.bridge?.getUsageStats) {
+      return this.safeParse(this.bridge.getUsageStats(options.startTimeMs, options.endTimeMs), { stats: [] });
+    }
+    return { stats: [] };
+  }
+
+  async updateBlockList(options: {
+    blockedPackages?: string[];
+    blockedDomains?: string[];
+    isStrict?: boolean;
+    allowEmergencyUnlock?: boolean;
+    activeSubject?: string;
+    isBlockingActive?: boolean;
+    isAdultBlockingEnabled?: boolean;
+  }): Promise<{ success: boolean }> {
+    if (this.bridge?.updateBlockList) {
+      return this.safeParse(this.bridge.updateBlockList(JSON.stringify(options)), { success: true });
+    }
+    return { success: true };
+  }
+
+  async updateBlockedApps(options: { blockedPackages: string[] }): Promise<{ success: boolean }> {
+    if (this.bridge?.updateBlockedApps) {
+      return this.safeParse(this.bridge.updateBlockedApps(JSON.stringify(options.blockedPackages)), { success: true });
+    }
+    return { success: true };
+  }
+
+  async updateBlockedDomains(options: { blockedDomains: string[] }): Promise<{ success: boolean }> {
+    if (this.bridge?.updateBlockedDomains) {
+      return this.safeParse(this.bridge.updateBlockedDomains(JSON.stringify(options.blockedDomains)), { success: true });
+    }
+    return { success: true };
+  }
+
+  async getBlockingStatus(): Promise<BlockingStatusResult> {
+    if (this.bridge?.getBlockingStatus) {
+      return this.safeParse(this.bridge.getBlockingStatus(), {
+        isBlockingActive: true,
+        isFocusSessionActive: false,
+        isFocusSessionPaused: false,
+        isStrictMode: false,
+        activeSubject: 'NEET 2027 Preparation',
+        blockedAppsCount: 0,
+        blockedDomainsCount: 0,
+        isAdultShieldActive: false,
+        isLockoutActive: false,
+        lockoutRemainingSec: 0
+      });
+    }
+    return {
+      isBlockingActive: true,
+      isFocusSessionActive: false,
+      isFocusSessionPaused: false,
+      isStrictMode: false,
+      activeSubject: 'NEET 2027 Preparation',
+      blockedAppsCount: 0,
+      blockedDomainsCount: 0,
+      isAdultShieldActive: false,
+      isLockoutActive: false,
+      lockoutRemainingSec: 0
+    };
+  }
+
+  async getWarningStatus(options: { targetType: string; targetId: string }): Promise<WarningStatusResult> {
+    if (this.bridge?.getWarningStatus) {
+      return this.safeParse(this.bridge.getWarningStatus(options.targetType, options.targetId), {
+        targetId: options.targetId,
+        targetType: options.targetType,
+        warningCount: 0,
+        maxWarnings: 5,
+        lastWarningTimeMs: 0,
+        lockoutCount: 0,
+        lastLockoutTimeMs: 0
+      });
+    }
+    return {
+      targetId: options.targetId,
+      targetType: options.targetType,
+      warningCount: 0,
+      maxWarnings: 5,
+      lastWarningTimeMs: 0,
+      lockoutCount: 0,
+      lastLockoutTimeMs: 0
+    };
+  }
+
+  async recordBlockedAttempt(options: { targetType: string; targetId: string; targetName?: string }): Promise<WarningRecordResult> {
+    if (this.bridge?.recordBlockedAttempt) {
+      return this.safeParse(this.bridge.recordBlockedAttempt(options.targetType, options.targetId, options.targetName || options.targetId), {
+        warningNumber: 1,
+        maxWarnings: 5,
+        isLockoutTriggered: false,
+        lockoutRemainingSec: 0,
+        targetId: options.targetId,
+        targetType: options.targetType,
+        targetName: options.targetName || options.targetId
+      });
+    }
+    return {
+      warningNumber: 1,
+      maxWarnings: 5,
+      isLockoutTriggered: false,
+      lockoutRemainingSec: 0,
+      targetId: options.targetId,
+      targetType: options.targetType,
+      targetName: options.targetName || options.targetId
+    };
+  }
+
+  async startFiveMinuteLockout(options?: { targetType?: string; targetId?: string; targetName?: string; durationMinutes?: number }): Promise<LockoutStatusResult> {
+    if (this.bridge?.startFiveMinuteLockout) {
+      return this.safeParse(this.bridge.startFiveMinuteLockout(
+        options?.targetType || 'app',
+        options?.targetId || 'manual',
+        options?.targetName || 'Focus Lockout',
+        options?.durationMinutes || 5
+      ), {
+        isLockoutActive: true,
+        lockoutUntilMs: Date.now() + (options?.durationMinutes || 5) * 60000,
+        remainingSeconds: (options?.durationMinutes || 5) * 60
+      });
+    }
+    return {
+      isLockoutActive: true,
+      lockoutUntilMs: Date.now() + 300000,
+      remainingSeconds: 300
+    };
+  }
+
+  async getLockoutStatus(): Promise<LockoutStatusResult> {
+    if (this.bridge?.getLockoutStatus) {
+      return this.safeParse(this.bridge.getLockoutStatus(), {
+        isLockoutActive: false,
+        lockoutUntilMs: 0,
+        remainingSeconds: 0
+      });
+    }
+    return {
+      isLockoutActive: false,
+      lockoutUntilMs: 0,
+      remainingSeconds: 0
+    };
+  }
+
+  async cancelLockoutIfAllowed(): Promise<{ success: boolean }> {
+    if (this.bridge?.cancelLockoutIfAllowed) {
+      return this.safeParse(this.bridge.cancelLockoutIfAllowed(), { success: true });
+    }
+    return { success: true };
+  }
+
+  async getBlockedEvents(): Promise<{ events: BlockedEventItem[] }> {
+    if (this.bridge?.getBlockedEvents) {
+      return this.safeParse(this.bridge.getBlockedEvents(), { events: [] });
+    }
+    return { events: [] };
+  }
+
+  async resetDailyWarnings(): Promise<{ success: boolean }> {
+    if (this.bridge?.resetDailyWarnings) {
+      return this.safeParse(this.bridge.resetDailyWarnings(), { success: true });
+    }
+    return { success: true };
+  }
+
+  async startFocusSession(options: {
+    durationMinutes: number;
+    subjectName: string;
+    isStrict: boolean;
+    remainingSeconds: number;
+  }): Promise<{ success: boolean }> {
+    if (this.bridge?.startFocusSession) {
+      return this.safeParse(this.bridge.startFocusSession(
+        options.durationMinutes,
+        options.subjectName,
+        options.isStrict,
+        options.remainingSeconds
+      ), { success: true });
+    }
+    return { success: true };
+  }
+
+  async stopFocusSession(): Promise<{ success: boolean }> {
+    if (this.bridge?.stopFocusSession) {
+      return this.safeParse(this.bridge.stopFocusSession(), { success: true });
+    }
+    return { success: true };
+  }
+
+  async checkPermissions(): Promise<PermissionStatus> {
+    if (this.bridge?.checkPermissions) {
+      return this.safeParse(this.bridge.checkPermissions(), {
+        hasUsageStats: false,
+        hasAccessibility: false,
+        isAccessibilityRunning: false,
+        hasNotification: false,
+        hasBatteryOptimizationIgnored: false,
+        hasVpnPermission: false,
+        isVpnRunning: false,
+        isVpnStarting: false,
+        anotherVpnActive: false,
+        blockedDomainsCount: 0,
+        lastVpnError: '',
+        hasExactAlarm: false,
+        hasDeviceAdmin: false,
+        isLockoutActive: false,
+        lockoutRemainingSec: 0
+      });
+    }
+    return {
+      hasUsageStats: false,
+      hasAccessibility: false,
+      isAccessibilityRunning: false,
+      hasNotification: false,
+      hasBatteryOptimizationIgnored: false,
+      hasVpnPermission: false,
+      isVpnRunning: false,
+      isVpnStarting: false,
+      anotherVpnActive: false,
+      blockedDomainsCount: 0,
+      lastVpnError: '',
+      hasExactAlarm: false,
+      hasDeviceAdmin: false,
+      isLockoutActive: false,
+      lockoutRemainingSec: 0
+    };
+  }
+
+  async getDiagnostics(): Promise<PermissionStatus> {
+    return this.checkPermissions();
+  }
+
+  async getStrikeCounts(): Promise<{ strikes: Record<string, number>; isLockdownActive?: boolean; lockdownRemainingSec?: number }> {
+    if (this.bridge?.getStrikeCounts) {
+      return this.safeParse(this.bridge.getStrikeCounts(), { strikes: {}, isLockdownActive: false, lockdownRemainingSec: 0 });
+    }
+    return { strikes: {}, isLockdownActive: false, lockdownRemainingSec: 0 };
+  }
+
+  async startVpnProtection(): Promise<{ started: boolean; needsPermission: boolean }> {
+    if (this.bridge?.startVpnProtection) {
+      return this.safeParse(this.bridge.startVpnProtection(), { started: false, needsPermission: true });
+    }
+    return { started: false, needsPermission: true };
+  }
+
+  async stopVpnProtection(): Promise<{ stopped: boolean }> {
+    if (this.bridge?.stopVpnProtection) {
+      return this.safeParse(this.bridge.stopVpnProtection(), { stopped: true });
+    }
+    return { stopped: true };
+  }
+
+  async requestPermission(options: {
+    type: 'usage_stats' | 'accessibility' | 'notification' | 'battery_optimization' | 'vpn' | 'exact_alarm' | 'device_admin';
+  }): Promise<{ granted: boolean }> {
+    if (this.bridge?.requestPermission) {
+      return this.safeParse(this.bridge.requestPermission(options.type), { granted: true });
+    }
+    return { granted: true };
+  }
+
+  async openAppSettings(): Promise<void> {
+    if (this.bridge?.openAppSettings) {
+      this.bridge.openAppSettings();
+    }
+  }
+}
+
 export const isNativePlatform = (): boolean => {
-  return Capacitor.isNativePlatform();
+  return typeof (window as any).AndroidBridge !== 'undefined' || Capacitor.isNativePlatform();
 };
 
 export const getNativeBridge = (): FocusBlockerPluginInterface => {
+  if (typeof (window as any).AndroidBridge !== 'undefined') {
+    return new AndroidBridgeAdapter();
+  }
   return FocusBlocker;
 };
+

@@ -42,8 +42,18 @@ const STORAGE_KEYS = {
   USER_SETTINGS: 'ff_user_settings',
   DAILY_ANALYTICS: 'ff_daily_analytics',
   STUDY_SESSIONS: 'ff_study_sessions',
-  FOCUS_SESSIONS: 'ff_focus_sessions'
+  FOCUS_SESSIONS: 'ff_focus_sessions',
+  SELECTED_18_PLUS_CATEGORIES: 'ff_selected_18_plus_categories',
+  IS_ADULT_SHIELD_ENABLED: 'ff_is_adult_shield_enabled'
 };
+
+export const DEFAULT_18_PLUS_CATEGORIES: string[] = [
+  '18+ Adult & Porn',
+  'Hentai (Anime & Streaming)',
+  'Hentai Manhwa (Pornhwa 18+)',
+  'Hentai Manga (18+)',
+  'Doujinshi / Dojin (18+)'
+];
 
 // Seed User Profile
 export const DEFAULT_USER_PROFILE: UserProfile = {
@@ -553,7 +563,7 @@ export const DEFAULT_USER_SETTINGS: UserSettings = {
   breakReminders: true,
   breakIntervalMinutes: 25,
   emergencyUnlockAllowed: true,
-  emergencyUnlockDelaySeconds: 30,
+  emergencyUnlockDelaySeconds: 0,
   examCountdownDate: '2027-05-02',
   biologyMode: 'separate',
   biologyOrganizationMode: 'separate',
@@ -718,8 +728,37 @@ export const StorageEngine = {
   getBlockedApps: (): BlockedApp[] => getStoredItem(STORAGE_KEYS.BLOCKED_APPS, DEFAULT_BLOCKED_APPS),
   setBlockedApps: (apps: BlockedApp[]) => setStoredItem(STORAGE_KEYS.BLOCKED_APPS, apps),
 
-  getBlockedWebsites: (): BlockedWebsite[] => getStoredItem(STORAGE_KEYS.BLOCKED_WEBSITES, DEFAULT_BLOCKED_WEBSITES),
+  getBlockedWebsites: (): BlockedWebsite[] => {
+    const raw = getStoredItem(STORAGE_KEYS.BLOCKED_WEBSITES, DEFAULT_BLOCKED_WEBSITES);
+    if (!Array.isArray(raw)) return DEFAULT_BLOCKED_WEBSITES;
+    // Sanitize: strip out legacy bulk adult domains (e.g. 0.xxx-cdn.com) so the UI domain cards list stays clean
+    const cleaned = raw.filter(site => {
+      if (!site) return false;
+      if (typeof site.id === 'string' && site.id.startsWith('web-bulk-')) return false;
+      if (site.category === 'Adult Content') return false;
+      if (
+        site.category === '18+ Adult & Porn' ||
+        site.category === 'Hentai (Anime & Streaming)' ||
+        site.category === 'Hentai Manhwa (Pornhwa 18+)' ||
+        site.category === 'Hentai Manga (18+)' ||
+        site.category === 'Doujinshi / Dojin (18+)'
+      ) {
+        return false;
+      }
+      return true;
+    });
+    if (cleaned.length !== raw.length) {
+      setStoredItem(STORAGE_KEYS.BLOCKED_WEBSITES, cleaned);
+    }
+    return cleaned;
+  },
   setBlockedWebsites: (sites: BlockedWebsite[]) => setStoredItem(STORAGE_KEYS.BLOCKED_WEBSITES, sites),
+
+  getSelected18PlusCategories: (): string[] => getStoredItem(STORAGE_KEYS.SELECTED_18_PLUS_CATEGORIES, DEFAULT_18_PLUS_CATEGORIES),
+  setSelected18PlusCategories: (cats: string[]) => setStoredItem(STORAGE_KEYS.SELECTED_18_PLUS_CATEGORIES, cats),
+
+  getIsAdultShieldEnabled: (): boolean => getStoredItem(STORAGE_KEYS.IS_ADULT_SHIELD_ENABLED, true),
+  setIsAdultShieldEnabled: (enabled: boolean) => setStoredItem(STORAGE_KEYS.IS_ADULT_SHIELD_ENABLED, enabled),
 
   getSchedules: (): BlockingSchedule[] => getStoredItem(STORAGE_KEYS.BLOCKING_SCHEDULES, DEFAULT_SCHEDULES),
   setSchedules: (schedules: BlockingSchedule[]) => setStoredItem(STORAGE_KEYS.BLOCKING_SCHEDULES, schedules),
