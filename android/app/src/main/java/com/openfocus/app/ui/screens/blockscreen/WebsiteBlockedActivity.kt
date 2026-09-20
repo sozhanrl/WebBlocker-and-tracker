@@ -81,7 +81,7 @@ class WebsiteBlockedActivity : AppCompatActivity() {
             tvWarningBadge.setTextColor(getColor(android.R.color.holo_orange_light))
         }
 
-        // 3-second reflection countdown on pill button (shows 3 -> 2 -> 1 -> Open New Tab)
+        // 3-second reflection countdown on pill button (shows 3 -> 2 -> 1 -> Return to Browser)
         btnPill.text = "1"
         countDownTimer = object : CountDownTimer(3000L, 1000L) {
             override fun onTick(millisUntilFinished: Long) {
@@ -91,44 +91,33 @@ class WebsiteBlockedActivity : AppCompatActivity() {
 
             override fun onFinish() {
                 isCountDownFinished = true
-                btnPill.text = "Open New Tab"
+                btnPill.text = "Return to Browser"
             }
         }.start()
 
         btnPill.setOnClickListener {
-            openNewTabInBrowser()
+            returnToBrowser()
         }
     }
 
     /**
-     * Opens a clean new tab in the same browser so the user can continue studying
-     * without being locked in an infinite intercept loop on the blocked URL.
+     * Returns the user to their browser's native Home / New Tab start screen
+     * (Chrome New Tab Page with Google search & shortcuts, or Brave New Tab Page).
      */
-    private fun openNewTabInBrowser() {
+    private fun returnToBrowser() {
         countDownTimer?.cancel()
         val pkg = browserPackage ?: getPreferredBrowserPackage()
         try {
-            val newTabIntent = Intent(Intent.ACTION_VIEW, Uri.parse("https://www.google.com")).apply {
-                if (!pkg.isNullOrBlank()) {
-                    setPackage(pkg)
+            if (!pkg.isNullOrBlank()) {
+                val launchIntent = packageManager.getLaunchIntentForPackage(pkg)?.apply {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED)
                 }
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
-                putExtra(Browser.EXTRA_CREATE_NEW_TAB, true)
-                putExtra("create_new_tab", true)
-                putExtra(Browser.EXTRA_APPLICATION_ID, pkg ?: packageName)
+                if (launchIntent != null) {
+                    startActivity(launchIntent)
+                }
             }
-            startActivity(newTabIntent)
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to open new tab in browser: ${e.message}")
-            try {
-                if (!pkg.isNullOrBlank()) {
-                    val launchIntent = packageManager.getLaunchIntentForPackage(pkg)
-                    if (launchIntent != null) {
-                        launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                        startActivity(launchIntent)
-                    }
-                }
-            } catch (_: Exception) {}
+            Log.e(TAG, "Failed to launch browser: ${e.message}")
         }
         finish()
     }
@@ -159,7 +148,7 @@ class WebsiteBlockedActivity : AppCompatActivity() {
 
     @Deprecated("Deprecated in Java")
     override fun onBackPressed() {
-        openNewTabInBrowser()
+        returnToBrowser()
     }
 
     override fun onDestroy() {

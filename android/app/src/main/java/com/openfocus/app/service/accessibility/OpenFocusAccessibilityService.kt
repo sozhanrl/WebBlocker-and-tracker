@@ -306,6 +306,9 @@ class OpenFocusAccessibilityService : AccessibilityService() {
 
         Log.w(TAG, "🛑 BLOCKED WEBSITE DETECTED in browser ($browserPackage): '$domain'")
 
+        // Navigate browser away from blocked URL directly to native Home / New Tab start page (Images 1 & 2)
+        returnBrowserToStartPage(browserPackage)
+
         // Record violation with 5-warning / 5-min / 30-min ladder
         val result = LockdownManager.recordAttempt(this, domain, "website", domain)
 
@@ -330,6 +333,65 @@ class OpenFocusAccessibilityService : AccessibilityService() {
             putExtra(WebsiteBlockedActivity.EXTRA_BROWSER_PACKAGE, browserPackage)
         }
         startActivity(intent)
+    }
+
+    /**
+     * Navigates the browser away from the blocked URL directly to its native Home / Start screen
+     * (Chrome New Tab Page with Google search & shortcuts, or Brave New Tab Page with privacy stats & wallpaper).
+     */
+    private fun returnBrowserToStartPage(packageName: String) {
+        try {
+            val rootNode = rootInActiveWindow
+            var navigated = false
+
+            if (rootNode != null) {
+                // 1. Look for Home button in Chrome, Brave, Samsung Internet, Edge, etc.
+                val homeIds = listOf(
+                    "$packageName:id/home_button",
+                    "home_button",
+                    "$packageName:id/toolbar_home_button",
+                    "toolbar_home_button"
+                )
+                for (id in homeIds) {
+                    val nodes = rootNode.findAccessibilityNodeInfosByViewId(id)
+                    if (!nodes.isNullOrEmpty()) {
+                        for (node in nodes) {
+                            if (node.isClickable && node.performAction(AccessibilityNodeInfo.ACTION_CLICK)) {
+                                Log.i(TAG, "Navigated $packageName to Start Page via Home button ($id)")
+                                navigated = true
+                                break
+                            }
+                        }
+                    }
+                    if (navigated) break
+                }
+
+                // 2. If Home button not found by ID, look for contentDescription containing "Home"
+                if (!navigated) {
+                    val homeDescNodes = rootNode.findAccessibilityNodeInfosByText("Home")
+                    if (!homeDescNodes.isNullOrEmpty()) {
+                        for (node in homeDescNodes) {
+                            if (node.isClickable && node.performAction(AccessibilityNodeInfo.ACTION_CLICK)) {
+                                Log.i(TAG, "Navigated $packageName to Start Page via text/description 'Home'")
+                                navigated = true
+                                break
+                            }
+                        }
+                    }
+                }
+            }
+
+            // 3. Fallback: Perform Global Action Back to pop off the blocked URL back to New Tab / Start page
+            if (!navigated) {
+                performGlobalAction(GLOBAL_ACTION_BACK)
+                Log.i(TAG, "Navigated $packageName to Start Page via GLOBAL_ACTION_BACK")
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error returning browser to start page: ${e.message}")
+            try {
+                performGlobalAction(GLOBAL_ACTION_BACK)
+            } catch (_: Exception) {}
+        }
     }
 
     override fun onInterrupt() {
