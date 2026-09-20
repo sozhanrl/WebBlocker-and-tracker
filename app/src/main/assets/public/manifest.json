@@ -1,0 +1,20 @@
+{
+  "name": "NEET Tracker 2027 — FocusForge",
+  "short_name": "NEET 2027",
+  "description": "Complete offline-ready NEET 2027 syllabus tracker, routine timetable, focus timer, and digital discipline app.",
+  "start_url": "/",
+  "id": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0B132B",
+  "theme_color": "#0B132B",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["education", "productivity"]
+}

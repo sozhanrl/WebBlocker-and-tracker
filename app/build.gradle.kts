@@ -69,6 +69,7 @@ dependencies {
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.splashscreen)
     implementation(libs.material)
+    implementation("androidx.webkit:webkit:1.12.1")
 
     // Compose BOM
     implementation(platform(libs.androidx.compose.bom))
