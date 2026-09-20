@@ -108,7 +108,7 @@ class WebsiteBlockedActivity : AppCompatActivity() {
         countDownTimer?.cancel()
         val pkg = browserPackage ?: getPreferredBrowserPackage()
         try {
-            val newTabIntent = Intent(Intent.ACTION_VIEW, Uri.parse("about:blank")).apply {
+            val newTabIntent = Intent(Intent.ACTION_VIEW, Uri.parse("https://www.google.com")).apply {
                 if (!pkg.isNullOrBlank()) {
                     setPackage(pkg)
                 }
