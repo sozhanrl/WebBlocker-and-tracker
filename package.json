@@ -9,7 +9,7 @@
     "preview": "vite preview",
     "cap:sync": "cap sync android",
     "cap:open": "cap open android",
-    "build:android": "npm run build && npx cap sync android",
+    "build:android": "npm run build && npx cap sync android && node -e \"fs.cpSync('dist', 'app/src/main/assets/public', {recursive: true})\"",
     "update:blocklist": "npx tsx scripts/fetch-adult-blocklist.ts"
   },
   "dependencies": {

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import {
   UserProfile,
   UserGoals,
@@ -77,6 +77,10 @@ interface AppContextType {
   setBlockedAppsState: React.Dispatch<React.SetStateAction<BlockedApp[]>>;
   toggleAppBlocked: (appId: string) => void;
   updateAppLimit: (appId: string, limitMinutes: number) => void;
+  removeBlockedApp: (appId: string) => void;
+  clearAllBlockedApps: () => void;
+  addBlockedApp: (app: BlockedApp) => void;
+  bulkAddBlockedApps: (apps: BlockedApp[]) => void;
   blockedWebsites: BlockedWebsite[];
   addBlockedWebsite: (url: string, name: string, category: string) => void;
   bulkAddBlockedWebsites: (sites: { url: string; name: string; category: string }[]) => void;
@@ -178,7 +182,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [userGoals, setUserGoalsState] = useState<UserGoals>(StorageEngine.getUserGoals());
   const [checklists, setChecklistsState] = useState<ChecklistRoutine[]>(StorageEngine.getChecklists());
   const [calendarEvents, setCalendarEventsState] = useState<CalendarEvent[]>(StorageEngine.getCalendarEvents());
-  const [blockedApps, setBlockedAppsState] = useState<BlockedApp[]>(StorageEngine.getBlockedApps());
+  const [blockedApps, _setBlockedAppsState] = useState<BlockedApp[]>(() => StorageEngine.getBlockedApps());
+
+  // Wrapper for setBlockedAppsState that always guarantees persistence to StorageEngine / localStorage
+  const setBlockedAppsState: React.Dispatch<React.SetStateAction<BlockedApp[]>> = useCallback((updater) => {
+    _setBlockedAppsState(prev => {
+      const next = typeof updater === 'function' ? (updater as (prevState: BlockedApp[]) => BlockedApp[])(prev) : updater;
+      StorageEngine.setBlockedApps(next);
+      return next;
+    });
+  }, []);
   const [blockedWebsites, setBlockedWebsitesState] = useState<BlockedWebsite[]>(StorageEngine.getBlockedWebsites());
   const [selected18PlusCategories, setSelected18PlusCategoriesState] = useState<string[]>(StorageEngine.getSelected18PlusCategories());
   const [isAdultShieldEnabled, setIsAdultShieldEnabledState] = useState<boolean>(StorageEngine.getIsAdultShieldEnabled());
@@ -312,21 +325,53 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   // Blocked apps actions
-  const toggleAppBlocked = (appId: string) => {
+  const toggleAppBlocked = useCallback((appId: string) => {
     setBlockedAppsState(prev => {
       const next = prev.map(app => app.id === appId ? { ...app, isBlocked: !app.isBlocked } : app);
       StorageEngine.setBlockedApps(next);
       return next;
     });
-  };
+  }, [setBlockedAppsState]);
 
-  const updateAppLimit = (appId: string, limitMinutes: number) => {
+  const updateAppLimit = useCallback((appId: string, limitMinutes: number) => {
     setBlockedAppsState(prev => {
       const next = prev.map(app => app.id === appId ? { ...app, dailyLimitMinutes: limitMinutes } : app);
       StorageEngine.setBlockedApps(next);
       return next;
     });
-  };
+  }, [setBlockedAppsState]);
+
+  const removeBlockedApp = useCallback((appId: string) => {
+    setBlockedAppsState(prev => {
+      const next = prev.filter(app => app.id !== appId);
+      StorageEngine.setBlockedApps(next);
+      return next;
+    });
+  }, [setBlockedAppsState]);
+
+  const clearAllBlockedApps = useCallback(() => {
+    setBlockedAppsState([]);
+    StorageEngine.setBlockedApps([]);
+  }, [setBlockedAppsState]);
+
+  const addBlockedApp = useCallback((app: BlockedApp) => {
+    setBlockedAppsState(prev => {
+      const filtered = prev.filter(a => a.id !== app.id && a.packageName !== app.packageName);
+      const next = [app, ...filtered];
+      StorageEngine.setBlockedApps(next);
+      return next;
+    });
+  }, [setBlockedAppsState]);
+
+  const bulkAddBlockedApps = useCallback((newApps: BlockedApp[]) => {
+    setBlockedAppsState(prev => {
+      const newPkgMap = new Map(newApps.map(a => [a.packageName, a]));
+      const remaining = prev.filter(a => !newPkgMap.has(a.packageName));
+      const next = [...newApps, ...remaining];
+      StorageEngine.setBlockedApps(next);
+      return next;
+    });
+  }, [setBlockedAppsState]);
 
   // Blocked websites actions
   const addBlockedWebsite = (url: string, name: string, category: string) => {
@@ -958,6 +1003,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setBlockedAppsState,
         toggleAppBlocked,
         updateAppLimit,
+        removeBlockedApp,
+        clearAllBlockedApps,
+        addBlockedApp,
+        bulkAddBlockedApps,
         blockedWebsites,
         addBlockedWebsite,
         bulkAddBlockedWebsites,

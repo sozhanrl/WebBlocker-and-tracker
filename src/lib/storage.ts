@@ -725,7 +725,21 @@ export const StorageEngine = {
   getUserGoals: (): UserGoals => getStoredItem(STORAGE_KEYS.USER_GOALS, DEFAULT_USER_GOALS),
   setUserGoals: (goals: UserGoals) => setStoredItem(STORAGE_KEYS.USER_GOALS, goals),
 
-  getBlockedApps: (): BlockedApp[] => getStoredItem(STORAGE_KEYS.BLOCKED_APPS, DEFAULT_BLOCKED_APPS),
+  getBlockedApps: (): BlockedApp[] => {
+    if (typeof window === 'undefined') return DEFAULT_BLOCKED_APPS;
+    try {
+      const item = localStorage.getItem(STORAGE_KEYS.BLOCKED_APPS);
+      if (item === null) {
+        localStorage.setItem(STORAGE_KEYS.BLOCKED_APPS, JSON.stringify(DEFAULT_BLOCKED_APPS));
+        return DEFAULT_BLOCKED_APPS;
+      }
+      const parsed = JSON.parse(item);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (e) {
+      console.error(`Error reading ${STORAGE_KEYS.BLOCKED_APPS} from storage:`, e);
+      return [];
+    }
+  },
   setBlockedApps: (apps: BlockedApp[]) => setStoredItem(STORAGE_KEYS.BLOCKED_APPS, apps),
 
   getBlockedWebsites: (): BlockedWebsite[] => {

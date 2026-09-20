@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Card } from '../common/Card';
 import { Button } from '../common/Button';
 import { useApp } from '../../context/AppContext';
@@ -23,7 +23,10 @@ import {
   Info,
   Sliders,
   Check,
-  CheckSquare
+  CheckSquare,
+  ChevronDown,
+  ChevronUp,
+  X
 } from 'lucide-react';
 
 const ADULT_CATEGORIES = [
@@ -128,6 +131,16 @@ export const WebsiteBlocker: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string>('all');
   const [displayLimit, setDisplayLimit] = useState(50);
+  const [isChecklistExpanded, setIsChecklistExpanded] = useState(true);
+  const domainInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (showAddForm) {
+      setTimeout(() => {
+        domainInputRef.current?.focus();
+      }, 100);
+    }
+  }, [showAddForm]);
 
   const [vpnStatus, setVpnStatus] = useState<PermissionStatus | null>(null);
   const [isVpnLoading, setIsVpnLoading] = useState(false);
@@ -378,7 +391,7 @@ export const WebsiteBlocker: React.FC = () => {
               onClick={() => setShowAddForm(!showAddForm)}
               size="sm"
               variant="secondary"
-              icon={<Plus className="w-4 h-4" />}
+              icon={showAddForm ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
               className="text-xs shrink-0"
             >
               {showAddForm ? 'Close' : 'Add Domain'}
@@ -445,6 +458,82 @@ export const WebsiteBlocker: React.FC = () => {
         </div>
       </Card>
 
+      {/* Add Website Form - EXPANDS DIRECTLY BELOW WEBSITE & DOMAIN BLOCKER */}
+      {showAddForm && (
+        <Card className="p-4 sm:p-5 border-sky-500/30 bg-gradient-to-br from-[#1C2541] to-[#0B132B] shadow-xl animate-in fade-in slide-in-from-top-2 duration-200">
+          <div className="flex items-center justify-between mb-3">
+            <h4 className="text-sm font-bold text-white flex items-center gap-2">
+              <Plus className="w-4 h-4 text-sky-400" />
+              <span>Add Custom Website Domain</span>
+            </h4>
+            <button
+              type="button"
+              onClick={() => setShowAddForm(false)}
+              className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition-colors"
+              title="Close"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+          <form onSubmit={handleAddCustom} className="space-y-3">
+            {error && <p className="text-xs text-rose-400">{error}</p>}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div>
+                <label className="text-[11px] font-semibold text-slate-300 block mb-1">Domain Name *</label>
+                <input
+                  ref={domainInputRef}
+                  type="text"
+                  placeholder="e.g. reddit.com or twitter.com"
+                  value={url}
+                  onChange={e => setUrl(e.target.value)}
+                  className="w-full px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-700 text-white text-xs focus:outline-none focus:border-sky-500"
+                />
+              </div>
+
+              <div>
+                <label className="text-[11px] font-semibold text-slate-300 block mb-1">Friendly Label</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Reddit Frontpage"
+                  value={name}
+                  onChange={e => setName(e.target.value)}
+                  className="w-full px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-700 text-white text-xs focus:outline-none focus:border-sky-500"
+                />
+              </div>
+
+              <div>
+                <label className="text-[11px] font-semibold text-slate-300 block mb-1">Category</label>
+                <select
+                  value={category}
+                  onChange={e => setCategory(e.target.value)}
+                  className="w-full px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-700 text-white text-xs focus:outline-none focus:border-sky-500"
+                >
+                  {customCategories.map(c => (
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowAddForm(false)}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" variant="primary" size="sm">
+                Add Domain
+              </Button>
+            </div>
+          </form>
+        </Card>
+      )}
+
       {/* DNS Notice */}
       <div className="p-3.5 rounded-xl bg-slate-900/80 border border-amber-500/30 flex items-start gap-3 text-xs text-slate-300">
         <Info className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
@@ -510,11 +599,11 @@ export const WebsiteBlocker: React.FC = () => {
 
               <h3 className="text-lg sm:text-xl font-extrabold text-white tracking-tight flex items-center justify-center sm:justify-start gap-2">
                 <ShieldCheck className="w-5 h-5 text-rose-400 shrink-0" />
-                <span>18+ Adult &amp; Hentai Content Shield</span>
+                <span>18+ Adult &amp; Porn Shield</span>
               </h3>
 
               <p className="text-xs text-slate-300 leading-relaxed max-w-xl">
-                Single-card checklist selector. Zero relapse protection across adult tubes, hentai anime streaming, 18+ manhwa, manga, and doujinshi archives. Toggles execute instantly with zero delay.
+                One-touch 18+ and adult content protection. Blocks explicit adult tubes, hentai anime streaming, manhwa, manga, and doujinshi archives with zero delay.
               </p>
 
               {/* Master Switch Row */}
@@ -522,7 +611,7 @@ export const WebsiteBlocker: React.FC = () => {
                 <button
                   type="button"
                   onClick={handleToggleMasterShield}
-                  className={`inline-flex items-center gap-2.5 px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-sm ${
+                  className={`inline-flex items-center gap-2.5 px-4 py-2.5 rounded-xl text-xs font-bold transition-all shadow-sm ${
                     isAdultShieldEnabled
                       ? 'bg-rose-600 hover:bg-rose-500 text-white shadow-rose-600/30'
                       : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700'
@@ -533,133 +622,130 @@ export const WebsiteBlocker: React.FC = () => {
                   <span>{isAdultShieldEnabled ? '18+ Shield ACTIVE (Click to Turn Off)' : 'Turn ON 18+ Shield'}</span>
                 </button>
 
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleSelectAllCategories}
-                    className="text-xs text-rose-300 hover:bg-rose-500/10 px-2.5 py-1"
-                  >
-                    Select All
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleClearAllCategories}
-                    className="text-xs text-slate-400 hover:bg-slate-800 px-2.5 py-1"
-                  >
-                    Clear All
-                  </Button>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsChecklistExpanded(!isChecklistExpanded)}
+                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-slate-900/80 hover:bg-slate-800 border border-slate-700 text-slate-200 transition-colors"
+                >
+                  <CheckSquare className="w-3.5 h-3.5 text-rose-400" />
+                  <span>{isChecklistExpanded ? 'Hide Categories' : 'Customize Categories'}</span>
+                  {isChecklistExpanded ? (
+                    <ChevronUp className="w-3.5 h-3.5 text-slate-400" />
+                  ) : (
+                    <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
+                  )}
+                </button>
               </div>
             </div>
           </div>
         </div>
 
-        {/* The 5 Checklist Items in a Single Clean Section */}
+        {/* Retractable Category Checklist Section */}
         <div className="p-4 sm:p-5 space-y-3">
-          <div className="flex items-center justify-between">
-            <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
-              <CheckSquare className="w-4 h-4 text-rose-400" />
-              <span>18+ Category Selector Checklist</span>
-            </h4>
-            <span className="text-[11px] text-slate-400">
-              {selected18PlusCategories.length} of {CHECKLIST_CATEGORIES.length} selected
-            </span>
+          {/* Retractable Accordion Header */}
+          <div
+            onClick={() => setIsChecklistExpanded(!isChecklistExpanded)}
+            className="flex items-center justify-between p-3 rounded-xl bg-slate-900/70 hover:bg-slate-900 border border-slate-800 cursor-pointer transition-colors select-none"
+          >
+            <div className="flex items-center gap-2 flex-wrap">
+              <CheckSquare className="w-4 h-4 text-rose-400 shrink-0" />
+              <span className="text-xs font-bold text-slate-200 uppercase tracking-wider">
+                18+ Category Selector Checklist
+              </span>
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/30">
+                {selected18PlusCategories.length} of {CHECKLIST_CATEGORIES.length} selected
+              </span>
+            </div>
+
+            <div className="flex items-center gap-2 shrink-0">
+              {isChecklistExpanded && (
+                <div className="flex items-center gap-1 mr-1" onClick={(e) => e.stopPropagation()}>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleSelectAllCategories}
+                    className="text-[11px] text-rose-300 hover:bg-rose-500/10 px-2 py-0.5 h-auto"
+                  >
+                    Select All
+                  </Button>
+                  <span className="text-slate-600 text-xs">|</span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleClearAllCategories}
+                    className="text-[11px] text-slate-400 hover:bg-slate-800 px-2 py-0.5 h-auto"
+                  >
+                    Clear All
+                  </Button>
+                </div>
+              )}
+              {isChecklistExpanded ? (
+                <ChevronUp className="w-4 h-4 text-slate-400" />
+              ) : (
+                <ChevronDown className="w-4 h-4 text-slate-400" />
+              )}
+            </div>
           </div>
 
-          <div className="space-y-2">
-            {CHECKLIST_CATEGORIES.map(cat => {
-              const isChecked = selected18PlusCategories.includes(cat.category);
-              const isEffectivelyActive = isAdultShieldEnabled && isChecked;
+          {/* Retractable Category Items (Titles only - NO website lists or individual switches!) */}
+          {isChecklistExpanded && (
+            <div className="space-y-2 pt-1 animate-in fade-in duration-200">
+              {CHECKLIST_CATEGORIES.map(cat => {
+                const isChecked = selected18PlusCategories.includes(cat.category);
+                const isEffectivelyActive = isAdultShieldEnabled && isChecked;
 
-              return (
-                <div
-                  key={cat.id}
-                  onClick={() => toggle18PlusCategory(cat.category)}
-                  className={`p-3 sm:p-3.5 rounded-xl border cursor-pointer transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
-                    isEffectivelyActive
-                      ? `${cat.borderActive} shadow-sm`
-                      : 'border-slate-800 bg-slate-900/60 hover:bg-slate-900 hover:border-slate-700'
-                  }`}
-                  role="checkbox"
-                  aria-checked={isChecked}
-                  tabIndex={0}
-                >
-                  {/* Left: Checkbox + Icon + Title + Subtext */}
-                  <div className="flex items-start gap-3 min-w-0 flex-1">
-                    <div className="mt-0.5 shrink-0">
-                      {isChecked ? (
-                        <div className="w-5 h-5 rounded-md bg-rose-600 text-white flex items-center justify-center shadow">
-                          <Check className="w-3.5 h-3.5 stroke-[3]" />
-                        </div>
-                      ) : (
-                        <div className="w-5 h-5 rounded-md border-2 border-slate-600 bg-slate-800/80 hover:border-slate-400 transition-colors" />
-                      )}
-                    </div>
-
-                    <span className="text-2xl select-none shrink-0 -mt-0.5">{cat.icon}</span>
-
-                    <div className="min-w-0 flex-1 space-y-1">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-xs sm:text-sm font-bold text-white tracking-tight">
-                          {cat.title}
-                        </span>
-                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${cat.badgeClass}`}>
-                          {cat.totalCount} Domains
-                        </span>
-                        {isEffectivelyActive && (
-                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-                            Active
-                          </span>
+                return (
+                  <div
+                    key={cat.id}
+                    onClick={() => toggle18PlusCategory(cat.category)}
+                    className={`p-3 rounded-xl border cursor-pointer transition-all flex items-center justify-between gap-3 ${
+                      isEffectivelyActive
+                        ? `${cat.borderActive} shadow-sm`
+                        : isChecked
+                        ? 'border-slate-700 bg-slate-900/90'
+                        : 'border-slate-800/80 bg-slate-900/40 hover:bg-slate-900/70 hover:border-slate-700'
+                    }`}
+                    role="checkbox"
+                    aria-checked={isChecked}
+                    tabIndex={0}
+                  >
+                    {/* Left: Checkbox + Icon + Title */}
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                      <div className="shrink-0">
+                        {isChecked ? (
+                          <div className="w-5 h-5 rounded-md bg-rose-600 text-white flex items-center justify-center shadow">
+                            <Check className="w-3.5 h-3.5 stroke-[3]" />
+                          </div>
+                        ) : (
+                          <div className="w-5 h-5 rounded-md border-2 border-slate-600 bg-slate-800/80 hover:border-slate-400 transition-colors" />
                         )}
                       </div>
 
-                      <p className="text-[11px] text-slate-400 leading-snug">
-                        {cat.description}
-                      </p>
+                      <span className="text-xl select-none shrink-0">{cat.icon}</span>
 
-                      {/* Explicit Key Domain Chips (including hentai20.io, hentai20.lol, hitomi.la, watchhentai.net) */}
-                      <div className="flex flex-wrap gap-1.5 pt-1">
-                        {cat.keyDomains.map(d => (
-                          <span
-                            key={d}
-                            className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-950/80 border border-white/5 text-slate-300"
-                          >
-                            {d}
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-xs sm:text-sm font-bold text-white tracking-tight">
+                            {cat.title}
                           </span>
-                        ))}
+                          {isEffectivelyActive && (
+                            <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                              Active
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  </div>
 
-                  {/* Right: Instant Toggle Switch */}
-                  <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-white/5">
-                    <span className={`text-[11px] font-semibold ${isEffectivelyActive ? 'text-rose-400' : 'text-slate-500'}`}>
-                      {isEffectivelyActive ? 'Blocked' : 'Unchecked'}
+                    {/* Right: Clean Domain count badge */}
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border shrink-0 ${cat.badgeClass}`}>
+                      {cat.totalCount} Domains
                     </span>
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        toggle18PlusCategory(cat.category);
-                      }}
-                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${
-                        isChecked ? 'bg-rose-600' : 'bg-slate-700'
-                      }`}
-                      title={isChecked ? `Uncheck ${cat.category}` : `Check ${cat.category}`}
-                    >
-                      <span
-                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                          isChecked ? 'translate-x-6' : 'translate-x-1'
-                        }`}
-                      />
-                    </button>
                   </div>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+          )}
 
           {/* Smart Keyword Guard Callout */}
           <div className="p-3.5 rounded-xl bg-slate-900/90 border border-rose-500/20 flex items-start gap-3 text-xs text-slate-300 mt-2">
@@ -692,7 +778,10 @@ export const WebsiteBlocker: React.FC = () => {
           </div>
 
           <Button
-            onClick={() => setShowAddForm(!showAddForm)}
+            onClick={() => {
+              setShowAddForm(true);
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
             size="sm"
             variant="secondary"
             icon={<Plus className="w-3.5 h-3.5" />}
@@ -701,68 +790,6 @@ export const WebsiteBlocker: React.FC = () => {
             Add Custom Domain
           </Button>
         </div>
-
-        {/* Add Website Form */}
-        {showAddForm && (
-          <Card className="p-4 sm:p-5 border-sky-500/30 animate-in fade-in duration-150">
-            <h4 className="text-sm font-bold text-white mb-3">Add Custom Website Domain</h4>
-            <form onSubmit={handleAddCustom} className="space-y-3">
-              {error && <p className="text-xs text-rose-400">{error}</p>}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div>
-                  <label className="text-[11px] font-semibold text-slate-300 block mb-1">Domain Name *</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. reddit.com or twitter.com"
-                    value={url}
-                    onChange={e => setUrl(e.target.value)}
-                    className="w-full px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-700 text-white text-xs focus:outline-none focus:border-sky-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-[11px] font-semibold text-slate-300 block mb-1">Friendly Label</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Reddit Frontpage"
-                    value={name}
-                    onChange={e => setName(e.target.value)}
-                    className="w-full px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-700 text-white text-xs focus:outline-none focus:border-sky-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-[11px] font-semibold text-slate-300 block mb-1">Category</label>
-                  <select
-                    value={category}
-                    onChange={e => setCategory(e.target.value)}
-                    className="w-full px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-700 text-white text-xs focus:outline-none focus:border-sky-500"
-                  >
-                    {customCategories.map(c => (
-                      <option key={c} value={c}>
-                        {c}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              <div className="flex justify-end gap-2 pt-2">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setShowAddForm(false)}
-                >
-                  Cancel
-                </Button>
-                <Button type="submit" variant="primary" size="sm">
-                  Add Domain
-                </Button>
-              </div>
-            </form>
-          </Card>
-        )}
 
         {/* Search & Filter Bar */}
         {customWebsites.length > 0 && (

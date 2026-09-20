@@ -297,7 +297,7 @@ class OpenFocusAccessibilityService : AccessibilityService() {
 
     private fun handleBlockedWebsite(domain: String, browserPackage: String) {
         val now = System.currentTimeMillis()
-        if (domain == lastInterceptTarget && (now - lastInterceptTimeMs) < 2000L) {
+        if (domain == lastInterceptTarget && (now - lastInterceptTimeMs) < 3500L) {
             return
         }
 
@@ -327,6 +327,7 @@ class OpenFocusAccessibilityService : AccessibilityService() {
             putExtra(WebsiteBlockedActivity.EXTRA_STRIKE_COUNT, result.strikeCount)
             putExtra(WebsiteBlockedActivity.EXTRA_TODAY_COUNT, result.todayBlockCount)
             putExtra(WebsiteBlockedActivity.EXTRA_CATEGORY, category)
+            putExtra(WebsiteBlockedActivity.EXTRA_BROWSER_PACKAGE, browserPackage)
         }
         startActivity(intent)
     }

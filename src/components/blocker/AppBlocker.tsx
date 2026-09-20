@@ -31,7 +31,15 @@ import {
 import { Button } from '../common/Button';
 
 export const AppBlocker: React.FC = () => {
-  const { blockedApps, setBlockedAppsState, blockedWebsites } = useApp();
+  const {
+    blockedApps,
+    setBlockedAppsState,
+    toggleAppBlocked,
+    updateAppLimit,
+    removeBlockedApp,
+    clearAllBlockedApps,
+    blockedWebsites
+  } = useApp();
   const { isRunning: isFocusActive, remainingSeconds, subject, isStrictMode } = useFocusTimer();
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -173,43 +181,50 @@ export const AppBlocker: React.FC = () => {
 
   // Toggle blocking state of an individual selected app
   const handleToggleAppBlocked = (appId: string) => {
-    setBlockedAppsState(prev => {
-      const next = prev.map(app => (app.id === appId ? { ...app, isBlocked: !app.isBlocked } : app));
-      const activePkgs = next.filter(a => a.isBlocked).map(a => a.packageName);
-      const activeDomains = blockedWebsites.filter(w => w.isBlocked).map(w => w.url);
-      getNativeBridge().updateBlockList({
-        blockedPackages: activePkgs,
-        blockedDomains: activeDomains,
-        isStrict: isStrictMode,
-        allowEmergencyUnlock: true,
-        activeSubject: subject || 'NEET 2027 Study Session'
-      }).catch(console.warn);
-      return next;
-    });
+    toggleAppBlocked(appId);
+    const next = blockedApps.map(app => (app.id === appId ? { ...app, isBlocked: !app.isBlocked } : app));
+    const activePkgs = next.filter(a => a.isBlocked).map(a => a.packageName);
+    const activeDomains = blockedWebsites.filter(w => w.isBlocked).map(w => w.url);
+    getNativeBridge().updateBlockList({
+      blockedPackages: activePkgs,
+      blockedDomains: activeDomains,
+      isStrict: isStrictMode,
+      allowEmergencyUnlock: true,
+      activeSubject: subject || 'NEET 2027 Study Session'
+    }).catch(console.warn);
   };
 
   // Change daily limit for a selected app
   const handleChangeLimit = (appId: string, minutes: number) => {
-    setBlockedAppsState(prev =>
-      prev.map(app => (app.id === appId ? { ...app, dailyLimitMinutes: minutes } : app))
-    );
+    updateAppLimit(appId, minutes);
   };
 
   // Remove an app completely from the blocklist
   const handleRemoveApp = (appId: string) => {
-    setBlockedAppsState(prev => {
-      const next = prev.filter(app => app.id !== appId);
-      const activePkgs = next.filter(a => a.isBlocked).map(a => a.packageName);
-      const activeDomains = blockedWebsites.filter(w => w.isBlocked).map(w => w.url);
-      getNativeBridge().updateBlockList({
-        blockedPackages: activePkgs,
-        blockedDomains: activeDomains,
-        isStrict: isStrictMode,
-        allowEmergencyUnlock: true,
-        activeSubject: subject || 'NEET 2027 Study Session'
-      }).catch(console.warn);
-      return next;
-    });
+    removeBlockedApp(appId);
+    const next = blockedApps.filter(app => app.id !== appId);
+    const activePkgs = next.filter(a => a.isBlocked).map(a => a.packageName);
+    const activeDomains = blockedWebsites.filter(w => w.isBlocked).map(w => w.url);
+    getNativeBridge().updateBlockList({
+      blockedPackages: activePkgs,
+      blockedDomains: activeDomains,
+      isStrict: isStrictMode,
+      allowEmergencyUnlock: true,
+      activeSubject: subject || 'NEET 2027 Study Session'
+    }).catch(console.warn);
+  };
+
+  // Remove all apps completely from the blocklist
+  const handleClearAllApps = () => {
+    clearAllBlockedApps();
+    const activeDomains = blockedWebsites.filter(w => w.isBlocked).map(w => w.url);
+    getNativeBridge().updateBlockList({
+      blockedPackages: [],
+      blockedDomains: activeDomains,
+      isStrict: isStrictMode,
+      allowEmergencyUnlock: true,
+      activeSubject: subject || 'NEET 2027 Study Session'
+    }).catch(console.warn);
   };
 
   // Filtered selected apps for the main list
@@ -377,15 +392,26 @@ export const AppBlocker: React.FC = () => {
 
       {/* 2. SEARCH & CONTROLS */}
       {blockedApps.length > 0 && (
-        <div className="relative w-full">
-          <Search className="w-4 h-4 absolute left-3 top-3.5 text-slate-400" />
-          <input
-            type="text"
-            placeholder="Search configured apps..."
-            value={searchTerm}
-            onChange={e => setSearchTerm(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 rounded-xl bg-slate-900 border border-slate-700 text-white text-xs focus:outline-none focus:border-sky-500"
-          />
+        <div className="flex items-center gap-2 w-full">
+          <div className="relative flex-1">
+            <Search className="w-4 h-4 absolute left-3 top-3.5 text-slate-400" />
+            <input
+              type="text"
+              placeholder="Search configured apps..."
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
+              className="w-full pl-9 pr-4 py-2 rounded-xl bg-slate-900 border border-slate-700 text-white text-xs focus:outline-none focus:border-sky-500"
+            />
+          </div>
+          <button
+            type="button"
+            onClick={handleClearAllApps}
+            className="px-3 py-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/20 text-xs font-semibold flex items-center gap-1.5 transition-colors shrink-0"
+            title="Remove all apps from blocklist"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+            <span>Clear All</span>
+          </button>
         </div>
       )}
 
