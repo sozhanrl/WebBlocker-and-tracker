@@ -380,3 +380,21 @@ export interface DailyAnalytics {
   mockTestsTaken?: number;
   questionsSolved?: number;
 }
+
+export interface NotionPage {
+  id: string;
+  title: string;
+  icon: string;
+  iconType?: 'emoji' | 'lucide';
+  coverGradient?: string;
+  content: string;
+  parentId?: string | null;
+  isFavorite: boolean;
+  isStored: boolean; // true = permanent storage; false = ephemeral scratchpad (do not store)
+  section: 'favorites' | 'private' | 'recent';
+  subPageIds?: string[];
+  tags?: string[];
+  createdAt: string;
+  updatedAt: string;
+}
+

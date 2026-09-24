@@ -39,7 +39,8 @@ export const ChapterCard: React.FC<ChapterCardProps> = ({
     updateChapterQuestions,
     deleteCustomChapter,
     addRevisionSchedule,
-    setActiveTab
+    setActiveTab,
+    openTakeNoteModal
   } = useApp();
   const { startFocusSession } = useFocusTimer();
 
@@ -200,6 +201,20 @@ export const ChapterCard: React.FC<ChapterCardProps> = ({
                   className="text-[11px] text-sky-400 hover:underline font-bold"
                 >
                   Log Questions
+                </button>
+                <button
+                  onClick={() => {
+                    openTakeNoteModal({
+                      title: `${chapter.subject}: ${chapter.title}`,
+                      subject: chapter.subject,
+                      content: `### 📚 ${chapter.title} (${chapter.subject})\n\n#### Key Formulas & High-Yield NCERT Facts:\n- \n\n#### Frequent Mistakes & PYQ Traps:\n- \n\n#### Checklist:\n- [ ] NCERT Theory Read\n- [ ] Examples & In-Text Problems\n- [ ] 50 PYQ MCQs Solved`,
+                      isStored: true
+                    });
+                  }}
+                  className="text-[11px] text-violet-400 hover:text-violet-300 font-bold flex items-center gap-1 hover:underline ml-1"
+                  title="Take or view Notion notes for this chapter"
+                >
+                  <FileText className="w-3 h-3" /> Note
                 </button>
               </div>
             ) : (

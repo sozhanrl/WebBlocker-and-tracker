@@ -30,6 +30,9 @@ import { ProfileScreen } from './components/settings/ProfileScreen';
 import { AuthModal } from './components/settings/AuthModal';
 import { SupabaseConfigModal } from './components/settings/SupabaseConfigModal';
 import { OnboardingFlow } from './components/onboarding/OnboardingFlow';
+import { NotionWorkspace } from './components/notes/NotionWorkspace';
+import { TakeNoteModal } from './components/notes/TakeNoteModal';
+import { TakeNoteFAB } from './components/notes/TakeNoteFAB';
 import { ChapterPlanner } from './components/ChapterPlanner';
 import { DailyChecklist } from './components/DailyChecklist';
 import { FocusTimer } from './components/FocusTimer';
@@ -377,6 +380,13 @@ export const MainApp: React.FC = () => {
           </div>
         )}
 
+        {/* ==================== TAB: NOTION NOTES WORKSPACE ==================== */}
+        {activeTab === 'notes' && (
+          <div className="space-y-5 animate-in fade-in duration-200">
+            <NotionWorkspace />
+          </div>
+        )}
+
         {/* ==================== TAB 9: PROFILE & SETTINGS ==================== */}
         {(activeTab === 'profile' || activeTab === 'settings') && (
           <div className="space-y-5 animate-in fade-in duration-200">
@@ -395,6 +405,8 @@ export const MainApp: React.FC = () => {
       <ActiveFocusOverlay />
       <SessionCompleteModal />
       <SimulatedBlockScreen />
+      <TakeNoteFAB />
+      <TakeNoteModal />
 
       <FocusSetupModal
         isOpen={showFocusModal}

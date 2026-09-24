@@ -252,6 +252,35 @@ class AndroidFocusBridge(private val context: Context) {
     }
 
     @JavascriptInterface
+    fun cancelActiveLockdown(): String {
+        LockdownManager.clearAllLockdownsAndStrikes(context)
+        return JSONObject().apply { put("success", true) }.toString()
+    }
+
+    @JavascriptInterface
+    fun syncDailyRoutine(routineJson: String): String {
+        return try {
+            com.openfocus.app.manager.RoutineNotificationManager.saveRoutineJson(context, routineJson)
+            JSONObject().apply { put("success", true) }.toString()
+        } catch (e: Exception) {
+            Log.e(TAG, "Error syncing daily routine: ${e.message}")
+            JSONObject().apply { put("success", false) }.toString()
+        }
+    }
+
+    @JavascriptInterface
+    fun setRoutineNotificationEnabled(enabled: Boolean): String {
+        com.openfocus.app.manager.RoutineNotificationManager.setNotificationEnabled(context, enabled)
+        return JSONObject().apply { put("success", true) }.toString()
+    }
+
+    @JavascriptInterface
+    fun getRoutineNotificationStatus(): String {
+        val enabled = com.openfocus.app.manager.RoutineNotificationManager.isNotificationEnabled(context)
+        return JSONObject().apply { put("enabled", enabled) }.toString()
+    }
+
+    @JavascriptInterface
     fun getBlockedEvents(): String {
         val events = stateManager.getBlockedEvents()
         return JSONObject().apply { put("events", events) }.toString()

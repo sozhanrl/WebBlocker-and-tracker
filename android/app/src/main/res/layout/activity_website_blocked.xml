@@ -46,7 +46,7 @@
             android:layout_marginTop="16dp"
             android:gravity="center"
             android:lineSpacingExtra="3dp"
-            android:text="‘asurascans.com’ was blocked by OpenFocus as it was added to your block list."
+            android:text="This website was blocked by OpenFocus as it was added to your block list."
             android:textColor="#CBD5E1"
             android:textSize="14sp" />
 
@@ -68,7 +68,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="2dp"
             android:gravity="center"
-            android:text="asurascans.com"
+            android:text="Restricted Website"
             android:textColor="#FFFFFF"
             android:textSize="14sp"
             android:textStyle="bold" />
@@ -112,7 +112,7 @@
             android:background="@drawable/bg_pill_button"
             android:elevation="0dp"
             android:stateListAnimator="@null"
-            android:text="1"
+            android:text="Return to Browser"
             android:textAllCaps="false"
             android:textColor="#FFFFFF"
             android:textSize="16sp"

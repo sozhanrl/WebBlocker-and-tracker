@@ -19,7 +19,8 @@ import {
   ChecklistRoutine,
   CalendarEvent,
   ChecklistHistoryEntry,
-  ChecklistItem
+  ChecklistItem,
+  NotionPage
 } from '../types';
 import { ALL_81_NEET_CHAPTERS } from './neetSyllabus81';
 import { SEED_QUESTION_BANK } from './questionBankSeed';
@@ -44,7 +45,8 @@ const STORAGE_KEYS = {
   STUDY_SESSIONS: 'ff_study_sessions',
   FOCUS_SESSIONS: 'ff_focus_sessions',
   SELECTED_18_PLUS_CATEGORIES: 'ff_selected_18_plus_categories',
-  IS_ADULT_SHIELD_ENABLED: 'ff_is_adult_shield_enabled'
+  IS_ADULT_SHIELD_ENABLED: 'ff_is_adult_shield_enabled',
+  NOTION_PAGES: 'ff_notion_pages_v1'
 };
 
 export const DEFAULT_18_PLUS_CATEGORIES: string[] = [
@@ -240,7 +242,7 @@ export const DEFAULT_SCHEDULES: BlockingSchedule[] = [
     title: 'Engineering College Class Block',
     startTime: '14:00',
     endTime: '19:00',
-    daysOfWeek: [1, 2, 3, 4, 5], // Mon - Fri
+    daysOfWeek: [1, 2, 3, 4, 5, 6], // Mon - Sat (2:00 PM - 7:00 PM / 6:00 PM Sat)
     isEnabled: true,
     isStrictMode: false,
     blockedAppIds: ['app-bgmi', 'app-netflix', 'app-insta'],
@@ -251,7 +253,7 @@ export const DEFAULT_SCHEDULES: BlockingSchedule[] = [
     title: 'Evening Revision & Problem Solving',
     startTime: '20:00',
     endTime: '22:30',
-    daysOfWeek: [0, 1, 2, 3, 4, 5, 6], // Everyday
+    daysOfWeek: [1, 2, 3, 4, 5, 6], // Mon - Sat (Sunday evenings are free)
     isEnabled: true,
     isStrictMode: false,
     blockedAppIds: ['app-insta', 'app-yt', 'app-bgmi', 'app-fb', 'app-netflix'],
@@ -260,10 +262,10 @@ export const DEFAULT_SCHEDULES: BlockingSchedule[] = [
   },
   {
     id: 'sch-3',
-    title: 'Sunday Mock Test Lockout',
-    startTime: '14:00',
-    endTime: '17:20',
-    daysOfWeek: [0], // Sunday
+    title: 'Sunday NEET Chapterwise Mock Test Lockout',
+    startTime: '09:30',
+    endTime: '12:30',
+    daysOfWeek: [0], // Sunday Morning Mock Test Sprint
     isEnabled: true,
     isStrictMode: true,
     blockedAppIds: ['app-insta', 'app-yt', 'app-bgmi', 'app-fb', 'app-whatsapp', 'app-netflix'],
@@ -611,6 +613,277 @@ export const DEFAULT_STUDY_SESSIONS: StudySession[] = [
   }
 ];
 
+// Seed Notion Pages (from user Notion screenshots)
+export const DEFAULT_NOTION_PAGES: NotionPage[] = [
+  {
+    id: 'page-games',
+    title: 'Games the I want play in future',
+    icon: '📄',
+    isFavorite: true,
+    isStored: true,
+    section: 'favorites',
+    subPageIds: ['page-neet'],
+    createdAt: '2025-09-04T10:00:00.000Z',
+    updatedAt: '2026-09-21T09:16:00.000Z',
+    content: `Red Dead Redemption 2
+
+Black Myth: Wukong
+
+Horizon Zero Dawn
+
+Horizon Forbidden West
+
+007 First Light
+
+Crimson Desert
+
+Ghost of Yōtei
+
+Phantom Blade Zero
+
+Gta 5
+
+Gta 6
+
+https://hitomi.la/search.html?language%3Aenglish%20female%3Amother%20solo_male%3Asole_male%20full%20tag%3Afull_color%20orderby%3Apopular%20orderbykey%3Ayear`
+  },
+  {
+    id: 'page-neet',
+    title: 'NEET',
+    icon: '📄',
+    parentId: 'page-games',
+    isFavorite: false,
+    isStored: true,
+    section: 'recent',
+    createdAt: '2025-09-04T10:05:00.000Z',
+    updatedAt: '2026-09-21T09:16:00.000Z',
+    content: `https://sciencelesson.in/
+
+https://www.selfstudys.com/
+
+https://www.neetguru.in/`
+  },
+  {
+    id: 'page-rec-date',
+    title: '@4 September 2025',
+    icon: '📄',
+    isFavorite: true,
+    isStored: true,
+    section: 'favorites',
+    createdAt: '2025-09-04T08:00:00.000Z',
+    updatedAt: '2025-09-04T22:00:00.000Z',
+    content: `# Daily Plan - 4 September 2025
+
+- [x] Physics Kinematics DPP
+- [x] Chemistry Thermodynamics Revision
+- [x] 50 MCQ Sprint completed
+- [ ] Read NCERT Plant Physiology`
+  },
+  {
+    id: 'page-mahal',
+    title: 'Mahal Kitchen utensil',
+    icon: '📄',
+    isFavorite: false,
+    isStored: true,
+    section: 'recent',
+    createdAt: '2025-09-01T12:00:00.000Z',
+    updatedAt: '2025-09-01T12:00:00.000Z',
+    content: `# Mahal Kitchen Utensil Inventory
+
+- Cookware set & pans
+- Stainless steel containers
+- Knife set & measuring cups`
+  },
+  {
+    id: 'page-github',
+    title: 'github',
+    icon: '📄',
+    isFavorite: false,
+    isStored: true,
+    section: 'recent',
+    createdAt: '2025-08-25T14:00:00.000Z',
+    updatedAt: '2026-09-21T08:41:00.000Z',
+    content: `# GitHub Projects & Useful Repositories
+
+- [sozhanrl/WebBlocker-and-tracker](https://github.com/sozhanrl/WebBlocker-and-tracker)
+- High-yield NEET study formula repos
+- Android Kotlin Accessibility tools`
+  },
+  {
+    id: 'page-personal',
+    title: 'Personal Website',
+    icon: '👤',
+    isFavorite: false,
+    isStored: true,
+    section: 'recent',
+    createdAt: '2025-08-20T11:00:00.000Z',
+    updatedAt: '2025-09-10T16:00:00.000Z',
+    content: `# Personal Website & Portfolio Architecture
+
+- Hero section with dark aesthetic
+- Interactive project showcase
+- Tech stack: React, TypeScript, Tailwind CSS`
+  },
+  {
+    id: 'page-getting-started',
+    title: 'Getting Started',
+    icon: '📄',
+    isFavorite: false,
+    isStored: true,
+    section: 'private',
+    createdAt: '2025-08-01T10:00:00.000Z',
+    updatedAt: '2025-08-01T10:00:00.000Z',
+    content: `# Welcome to your Notion Workspace!
+
+Capture your NEET notes, college schedules, and future goals in one place.
+
+### Storage Modes:
+- **Stored in Workspace:** Saved safely on your device.
+- **Scratchpad:** Ephemeral mode for rough calculations and thought dumps.`
+  },
+  {
+    id: 'page-budget',
+    title: 'Monthly Budget',
+    icon: '📄',
+    isFavorite: false,
+    isStored: true,
+    section: 'private',
+    createdAt: '2025-08-05T09:00:00.000Z',
+    updatedAt: '2025-09-01T10:00:00.000Z',
+    content: `# Student Monthly Budget
+
+- Books & Test Series: ₹2,000
+- Canteen & Refreshments: ₹1,500
+- Savings & Emergency: ₹1,500`
+  },
+  {
+    id: 'page-untitled-table',
+    title: 'Untitled',
+    icon: '📊',
+    isFavorite: false,
+    isStored: true,
+    section: 'private',
+    createdAt: '2025-08-10T15:00:00.000Z',
+    updatedAt: '2025-08-10T15:00:00.000Z',
+    content: `# Chapter Weightage Quick Table
+
+| Subject | High-Yield Topics | Questions |
+| :--- | :--- | :--- |
+| Physics | Mechanics, Modern Physics | 18 |
+| Chemistry | Organic GOC, Coordination | 16 |
+| Biology | Genetics, Human Physiology | 40 |`
+  },
+  {
+    id: 'page-jobs',
+    title: 'Job Application Tracker',
+    icon: '💼',
+    isFavorite: false,
+    isStored: true,
+    section: 'private',
+    createdAt: '2025-08-12T16:00:00.000Z',
+    updatedAt: '2025-08-20T17:00:00.000Z',
+    content: `# Internship & Career Applications
+
+- Summer Research Intern (Deep Learning Lab)
+- Open Source Contributor (GSoC)
+- Junior Software Engineer Apprentice`
+  },
+  {
+    id: 'page-projects',
+    title: 'Projects & Tasks',
+    icon: '📊',
+    isFavorite: false,
+    isStored: true,
+    section: 'private',
+    createdAt: '2025-08-15T18:00:00.000Z',
+    updatedAt: '2026-09-21T08:50:00.000Z',
+    content: `# FocusForge Active Projects
+
+- [x] College Timetable Integration (Mon-Fri SJT Classes)
+- [x] Sunday 8:00 AM Wake Up & 9:30–12:30 Mock Test
+- [x] Notion-style Workspace with Store / Scratchpad Option
+- [ ] Review UI/UX lab practical exercises`
+  },
+  {
+    id: 'page-reading',
+    title: 'Reading List',
+    icon: '📖',
+    isFavorite: false,
+    isStored: true,
+    section: 'private',
+    createdAt: '2025-08-18T19:00:00.000Z',
+    updatedAt: '2025-08-25T11:00:00.000Z',
+    content: `# Reading List
+
+- NCERT Biology Class 11 & 12 (Must read 5x)
+- Concepts of Physics by Dr. H.C. Verma
+- Elementary Problems in Organic Chemistry by M.S. Chouhan`
+  },
+  {
+    id: 'page-project-planner',
+    title: 'Project Planner',
+    icon: '📋',
+    isFavorite: false,
+    isStored: true,
+    section: 'private',
+    createdAt: '2025-08-22T10:00:00.000Z',
+    updatedAt: '2025-08-22T10:00:00.000Z',
+    content: `# Engineering College Project Planner
+
+- Phase 1: Problem statement & requirements
+- Phase 2: UI/UX Wireframing & prototype
+- Phase 3: Core service implementation`
+  },
+  {
+    id: 'page-todo',
+    title: 'Weekly To-do List',
+    icon: '📋',
+    isFavorite: false,
+    isStored: true,
+    section: 'private',
+    createdAt: '2025-08-25T08:00:00.000Z',
+    updatedAt: '2026-09-21T08:50:00.000Z',
+    content: `# Weekly Checklist
+
+- [x] Attend Monday classes: UI/UX, Deep Learning, Cyber Sec, Metrics, Coding
+- [ ] Prepare for Thursday UI/UX Lab in SJT217 (11:40 AM)
+- [ ] Complete Saturday 14:00–18:00 College Class
+- [ ] Sunday 8:00 AM Wake Up & 09:30–12:30 Chapterwise Mock Test`
+  },
+  {
+    id: 'page-habit',
+    title: 'Habit Tracker',
+    icon: '✔️',
+    isFavorite: false,
+    isStored: true,
+    section: 'private',
+    createdAt: '2025-08-28T07:00:00.000Z',
+    updatedAt: '2026-09-21T08:50:00.000Z',
+    content: `# Daily Discipline Habits
+
+- [x] Wake up on time (5:00 AM Weekday / 8:00 AM Sunday)
+- [x] 6-Hour NEET Target Achieved
+- [x] Auto-Block Distractions during 14:00–19:00 College Classes
+- [x] 50 MCQs Speed Sprint solved
+- [ ] 22:00 Bedtime sleep recovery`
+  },
+  {
+    id: 'page-scratchpad-sample',
+    title: 'Rough Formula Scratchpad',
+    icon: '📝',
+    isFavorite: false,
+    isStored: false, // Scratchpad / Do Not Store mode!
+    section: 'private',
+    createdAt: '2026-09-21T09:10:00.000Z',
+    updatedAt: '2026-09-21T09:15:00.000Z',
+    content: `v = u + at
+s = ut + (1/2)at^2
+v^2 = u^2 + 2as
+
+Temporary scratchpad calculation. This note is in 'Do Not Store' mode and will not be saved permanently unless you click 'Store to Workspace'.`
+  }
+];
+
 // Generic storage accessors with type safety
 export function getStoredItem<T>(key: string, defaultValue: T): T {
   if (typeof window === 'undefined') return defaultValue;
@@ -924,6 +1197,14 @@ export const StorageEngine = {
 
   getStudySessions: (): StudySession[] => getStoredItem(STORAGE_KEYS.STUDY_SESSIONS, DEFAULT_STUDY_SESSIONS),
   setStudySessions: (sessions: StudySession[]) => setStoredItem(STORAGE_KEYS.STUDY_SESSIONS, sessions),
+
+  // Notion Pages
+  getNotionPages: (): NotionPage[] => getStoredItem(STORAGE_KEYS.NOTION_PAGES, DEFAULT_NOTION_PAGES),
+  setNotionPages: (pages: NotionPage[]) => {
+    // Only persist pages marked as isStored (true) to permanent storage
+    const storedOnly = pages.filter(p => p.isStored !== false);
+    setStoredItem(STORAGE_KEYS.NOTION_PAGES, storedOnly);
+  },
 
   // Reset all
   resetAll: () => {

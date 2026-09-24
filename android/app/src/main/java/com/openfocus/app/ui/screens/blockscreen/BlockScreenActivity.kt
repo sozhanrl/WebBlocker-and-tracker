@@ -84,19 +84,9 @@ class BlockScreenActivity : AppCompatActivity() {
             tvWarningBadge.setTextColor(getColor(android.R.color.holo_orange_light))
         }
 
-        // 3-second reflection countdown on pill button (shows 3 -> 2 -> 1 -> Return to NEET Study)
-        btnPill.text = "1"
-        countDownTimer = object : CountDownTimer(3000L, 1000L) {
-            override fun onTick(millisUntilFinished: Long) {
-                val seconds = (millisUntilFinished / 1000L) + 1
-                btnPill.text = seconds.toString()
-            }
-
-            override fun onFinish() {
-                isCountDownFinished = true
-                btnPill.text = "Return to NEET Study"
-            }
-        }.start()
+        // Pill button immediately active without countdown timer
+        btnPill.text = "Return to NEET Study"
+        isCountDownFinished = true
 
         btnPill.setOnClickListener {
             returnSafely()

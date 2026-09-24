@@ -11,7 +11,8 @@ import {
   MoreHorizontal,
   BarChart3,
   X,
-  Sparkles
+  Sparkles,
+  FileText
 } from 'lucide-react';
 import { useApp, NavigationTab } from '../../context/AppContext';
 import { useFocusTimer } from '../../context/FocusTimerContext';
@@ -30,13 +31,14 @@ export const BottomNav: React.FC = () => {
 
   const mainNavItems: NavItem[] = [
     { id: 'home', label: 'Home', icon: Home },
-    { id: 'blocker', label: 'Blocker', icon: ShieldAlert },
+    { id: 'notes', label: 'Notes', icon: FileText },
     { id: 'focus', label: 'Focus', icon: Timer, badge: isRunning ? 'LIVE' : undefined },
     { id: 'neet', label: 'NEET 81', icon: BookOpen },
-    { id: 'checklists', label: 'Routines', icon: CheckSquare },
+    { id: 'blocker', label: 'Blocker', icon: ShieldAlert },
   ];
 
   const moreNavItems: NavItem[] = [
+    { id: 'checklists', label: 'Daily Routines', icon: CheckSquare },
     { id: 'calendar', label: 'Study Calendar', icon: Calendar },
     { id: 'mocktests', label: 'Mock Test Hub', icon: Award },
     { id: 'analytics', label: 'Analytics & Insights', icon: BarChart3 },

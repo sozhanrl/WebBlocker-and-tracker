@@ -27,8 +27,10 @@ class LockdownReceiver : BroadcastReceiver() {
 
         if (action == Intent.ACTION_SCREEN_ON || action == Intent.ACTION_USER_PRESENT) {
             if (LockdownManager.isLockdownActive(context)) {
-                Log.w(TAG, "User attempted screen unlock during active lockdown -> re-locking and showing countdown overlay")
-                LockdownManager.enforceLockdownIfActive(context)
+                val remSec = LockdownManager.getRemainingLockdownSec(context)
+                Log.d(TAG, "Screen wake during active focus lockdown ($remSec sec remaining). Guarded by AccessibilityService.")
+                // Note: Do NOT invoke dpm.lockNow() or launch overlays on screen wake.
+                // OpenFocusAccessibilityService will enforce restrictions if the user opens the restricted target.
             }
         }
     }

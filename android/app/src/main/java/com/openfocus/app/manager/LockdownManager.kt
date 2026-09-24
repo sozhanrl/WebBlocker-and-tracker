@@ -262,17 +262,7 @@ object LockdownManager {
         val now = System.currentTimeMillis()
 
         if (now < lockdownUntil) {
-            Log.w(TAG, "Lockdown is active (${(lockdownUntil - now) / 1000}s remaining). Re-enforcing lockNow and overlay.")
-
-            val dpm = context.getSystemService(Context.DEVICE_POLICY_SERVICE) as? DevicePolicyManager
-            val adminComponent = ComponentName(context, FocusDeviceAdminReceiver::class.java)
-            if (dpm != null && dpm.isAdminActive(adminComponent)) {
-                try {
-                    dpm.lockNow()
-                } catch (e: Exception) {
-                    Log.e(TAG, "Error re-locking device: ${e.message}")
-                }
-            }
+            Log.w(TAG, "Lockdown is active (${(lockdownUntil - now) / 1000}s remaining). Displaying overlay.")
 
             try {
                 val stage = prefs.getInt("lockout_stage", 1)
@@ -288,7 +278,7 @@ object LockdownManager {
                 }
                 context.startActivity(overlayIntent)
             } catch (e: Exception) {
-                // Ignore
+                Log.e(TAG, "Error showing LockdownOverlayActivity: ${e.message}")
             }
         }
     }
@@ -312,8 +302,30 @@ object LockdownManager {
             .putBoolean("is_lockout_active", false)
             .putLong("lockout_until_ms", 0L)
             .putInt("lockout_stage", 0)
+            .remove("lockout_target_id")
+            .remove("lockout_target_name")
+            .remove("lockout_target_type")
             .apply()
         Log.i(TAG, "Lockdown cancelled")
+    }
+
+    fun clearAllLockdownsAndStrikes(context: Context) {
+        val prefs = getPrefs(context)
+        val editor = prefs.edit()
+        for (key in prefs.all.keys) {
+            if (key.startsWith("violations:") || key.startsWith("lockouts_completed:") || key.startsWith("last_violation_time:")) {
+                editor.remove(key)
+            }
+        }
+        editor.putLong("lockdown_until", 0L)
+        editor.putBoolean("is_lockout_active", false)
+        editor.putLong("lockout_until_ms", 0L)
+        editor.putInt("lockout_stage", 0)
+        editor.remove("lockout_target_id")
+        editor.remove("lockout_target_name")
+        editor.remove("lockout_target_type")
+        editor.apply()
+        Log.i(TAG, "All focus lockdowns and violation strikes cleared successfully")
     }
 
     fun getStrikes(context: Context, targetKey: String): Int {

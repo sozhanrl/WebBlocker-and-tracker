@@ -306,6 +306,48 @@ class FocusBlockerPlugin : Plugin() {
     }
 
     @PluginMethod
+    fun cancelActiveLockdown(call: PluginCall) {
+        try {
+            LockdownManager.clearAllLockdownsAndStrikes(context)
+            call.resolve(JSObject().apply { put("success", true) })
+        } catch (e: Exception) {
+            call.reject("Failed to clear lockdown: ${e.message}", e)
+        }
+    }
+
+    @PluginMethod
+    fun syncDailyRoutine(call: PluginCall) {
+        try {
+            val routineJson = call.getString("routineJson") ?: "[]"
+            com.openfocus.app.manager.RoutineNotificationManager.saveRoutineJson(context, routineJson)
+            call.resolve(JSObject().apply { put("success", true) })
+        } catch (e: Exception) {
+            call.reject("Failed to sync routine: ${e.message}", e)
+        }
+    }
+
+    @PluginMethod
+    fun setRoutineNotificationEnabled(call: PluginCall) {
+        try {
+            val enabled = call.getBoolean("enabled", true) ?: true
+            com.openfocus.app.manager.RoutineNotificationManager.setNotificationEnabled(context, enabled)
+            call.resolve(JSObject().apply { put("success", true) })
+        } catch (e: Exception) {
+            call.reject("Failed to set routine notification: ${e.message}", e)
+        }
+    }
+
+    @PluginMethod
+    fun getRoutineNotificationStatus(call: PluginCall) {
+        try {
+            val enabled = com.openfocus.app.manager.RoutineNotificationManager.isNotificationEnabled(context)
+            call.resolve(JSObject().apply { put("enabled", enabled) })
+        } catch (e: Exception) {
+            call.reject("Failed to get routine notification status: ${e.message}", e)
+        }
+    }
+
+    @PluginMethod
     fun getBlockedEvents(call: PluginCall) {
         try {
             val events = stateManager.getBlockedEvents()

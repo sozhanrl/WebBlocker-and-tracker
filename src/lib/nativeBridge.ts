@@ -110,6 +110,9 @@ export interface FocusBlockerPluginInterface {
   startFiveMinuteLockout(options: { targetType?: string; targetId?: string; targetName?: string; durationMinutes?: number }): Promise<LockoutStatusResult>;
   getLockoutStatus(): Promise<LockoutStatusResult>;
   cancelLockoutIfAllowed(): Promise<{ success: boolean }>;
+  cancelActiveLockdown(): Promise<{ success: boolean }>;
+  syncDailyRoutine(options: { routineJson: string } | any[]): Promise<{ success: boolean }>;
+  setRoutineNotificationEnabled(options: { enabled: boolean } | boolean): Promise<{ success: boolean }>;
   getBlockedEvents(): Promise<{ events: BlockedEventItem[] }>;
   resetDailyWarnings(): Promise<{ success: boolean }>;
   startFocusSession(options: {
@@ -140,42 +143,39 @@ const FocusBlocker = registerPlugin<FocusBlockerPluginInterface>('FocusBlocker',
     updateBlockedApps: async () => ({ success: true }),
     updateBlockedDomains: async () => ({ success: true }),
     getBlockingStatus: async () => ({
-      isBlockingActive: true,
+      isBlockingActive: false,
       isFocusSessionActive: false,
       isFocusSessionPaused: false,
       isStrictMode: false,
-      activeSubject: 'NEET 2027 Preparation',
+      activeSubject: 'NEET 2027 Study',
       blockedAppsCount: 0,
       blockedDomainsCount: 0,
       isAdultShieldActive: false,
       isLockoutActive: false,
       lockoutRemainingSec: 0
     }),
-    getWarningStatus: async (opts: { targetType: string; targetId: string }) => ({
-      targetId: opts.targetId,
-      targetType: opts.targetType,
+    getWarningStatus: async () => ({
+      targetId: '',
+      targetType: 'app',
       warningCount: 0,
       maxWarnings: 5,
       lastWarningTimeMs: 0,
       lockoutCount: 0,
       lastLockoutTimeMs: 0
     }),
-    recordBlockedAttempt: async (opts: { targetType: string; targetId: string; targetName?: string }) => ({
+    recordBlockedAttempt: async () => ({
       warningNumber: 1,
       maxWarnings: 5,
       isLockoutTriggered: false,
       lockoutRemainingSec: 0,
-      targetId: opts.targetId,
-      targetType: opts.targetType,
-      targetName: opts.targetName || opts.targetId
+      targetId: '',
+      targetType: 'app',
+      targetName: ''
     }),
-    startFiveMinuteLockout: async (opts?: { targetType?: string; targetId?: string; targetName?: string; durationMinutes?: number }) => ({
-      isLockoutActive: true,
-      lockoutUntilMs: Date.now() + 300000,
-      remainingSeconds: 300,
-      targetId: opts?.targetId,
-      targetType: opts?.targetType,
-      targetName: opts?.targetName
+    startFiveMinuteLockout: async () => ({
+      isLockoutActive: false,
+      lockoutUntilMs: 0,
+      remainingSeconds: 0
     }),
     getLockoutStatus: async () => ({
       isLockoutActive: false,
@@ -183,6 +183,9 @@ const FocusBlocker = registerPlugin<FocusBlockerPluginInterface>('FocusBlocker',
       remainingSeconds: 0
     }),
     cancelLockoutIfAllowed: async () => ({ success: true }),
+    cancelActiveLockdown: async () => ({ success: true }),
+    syncDailyRoutine: async () => ({ success: true }),
+    setRoutineNotificationEnabled: async () => ({ success: true }),
     getBlockedEvents: async () => ({ events: [] }),
     resetDailyWarnings: async () => ({ success: true }),
     getStrikeCounts: async () => ({ strikes: {}, isLockdownActive: false, lockdownRemainingSec: 0 }),
@@ -409,6 +412,29 @@ class AndroidBridgeAdapter implements FocusBlockerPluginInterface {
   async cancelLockoutIfAllowed(): Promise<{ success: boolean }> {
     if (this.bridge?.cancelLockoutIfAllowed) {
       return this.safeParse(this.bridge.cancelLockoutIfAllowed(), { success: true });
+    }
+    return { success: true };
+  }
+
+  async cancelActiveLockdown(): Promise<{ success: boolean }> {
+    if (this.bridge?.cancelActiveLockdown) {
+      return this.safeParse(this.bridge.cancelActiveLockdown(), { success: true });
+    }
+    return { success: true };
+  }
+
+  async syncDailyRoutine(options: { routineJson: string } | any[]): Promise<{ success: boolean }> {
+    const jsonStr = Array.isArray(options) ? JSON.stringify(options) : (options?.routineJson || JSON.stringify(options));
+    if (this.bridge?.syncDailyRoutine) {
+      return this.safeParse(this.bridge.syncDailyRoutine(jsonStr), { success: true });
+    }
+    return { success: true };
+  }
+
+  async setRoutineNotificationEnabled(options: { enabled: boolean } | boolean): Promise<{ success: boolean }> {
+    const isEnabled = typeof options === 'boolean' ? options : (options?.enabled ?? true);
+    if (this.bridge?.setRoutineNotificationEnabled) {
+      return this.safeParse(this.bridge.setRoutineNotificationEnabled(isEnabled), { success: true });
     }
     return { success: true };
   }

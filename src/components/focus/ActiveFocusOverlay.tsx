@@ -2,7 +2,7 @@ import React from 'react';
 import { useFocusTimer } from '../../context/FocusTimerContext';
 import { useApp } from '../../context/AppContext';
 import { formatSecondsToTimer } from '../../utils/formatters';
-import { Play, Pause, Square, AlertTriangle, ShieldCheck, Sparkles, Smartphone } from 'lucide-react';
+import { Play, Pause, Square, AlertTriangle, ShieldCheck, Sparkles, Smartphone, FileText } from 'lucide-react';
 import { Button } from '../common/Button';
 
 export const ActiveFocusOverlay: React.FC = () => {
@@ -27,7 +27,7 @@ export const ActiveFocusOverlay: React.FC = () => {
     incrementDistractionPrevented
   } = useFocusTimer();
 
-  const { triggerSimulatedBlock, blockedApps } = useApp();
+  const { triggerSimulatedBlock, blockedApps, openTakeNoteModal } = useApp();
 
   if (!isRunning) return null;
 
@@ -152,7 +152,24 @@ export const ActiveFocusOverlay: React.FC = () => {
       </div>
 
       {/* Bottom Controls */}
-      <div className="w-full max-w-md flex flex-col items-center gap-4 pb-4">
+      <div className="w-full max-w-md flex flex-col items-center gap-3 pb-4">
+        {/* Quick Note during Focus Session */}
+        <button
+          onClick={() =>
+            openTakeNoteModal({
+              title: `${subject}: ${chapterTitle || 'Focus Session Note'}`,
+              subject: subject,
+              content: `### 🎯 Focus Session Notes (${subject})\n- **Chapter**: ${chapterTitle || 'General'}\n- **Task**: ${taskTitle || 'Study Block'}\n\n#### Key Concepts & Formulas:\n- \n\n#### Questions / Doubts:\n- `,
+              isStored: true
+            })
+          }
+          className="flex items-center gap-2 px-4 py-2 rounded-full bg-violet-600/20 hover:bg-violet-600/30 text-violet-300 border border-violet-500/30 hover:border-violet-500/50 text-xs font-bold transition-all shadow-md active:scale-95 group"
+          title="Jot down rough notes, concepts or formulas without leaving focus mode"
+        >
+          <FileText className="w-4 h-4 text-violet-400 group-hover:scale-110 transition-transform" />
+          <span>Take Note (Notion Notepad)</span>
+        </button>
+
         {/* Play/Pause & Finish Controls */}
         <div className="flex items-center justify-center gap-3 w-full">
           {isPaused ? (

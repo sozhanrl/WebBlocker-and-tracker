@@ -61,11 +61,20 @@ export const DailyChecklist: React.FC = () => {
 
   // Refresh routine & records
   const loadData = () => {
-    const routine = StorageService.getRoutine();
+    const routine = StorageService.getRoutineForDate(selectedDate);
     setRoutineItems(routine);
     const records = StorageService.getDailyRecord(selectedDate);
     setDayRecord(records);
     setWeeklyStats(StorageService.getWeeklyCompletionStats());
+
+    // If viewing today's date, ensure phone's notification is synced with today's timetable
+    const isViewingToday = selectedDate === new Date().toISOString().slice(0, 10);
+    if (isViewingToday && typeof window !== 'undefined') {
+      const bridge = (window as any).AndroidBridge;
+      if (bridge?.syncDailyRoutine) {
+        bridge.syncDailyRoutine(JSON.stringify(routine));
+      }
+    }
   };
 
   useEffect(() => {
@@ -161,7 +170,7 @@ export const DailyChecklist: React.FC = () => {
       category: newCategory
     };
     const nextList = [...routineItems, newItem];
-    StorageService.saveRoutine(nextList);
+    StorageService.saveRoutine(nextList, selectedDate);
     setRoutineItems(nextList);
     setShowAddModal(false);
     setNewTaskName('');
@@ -170,7 +179,7 @@ export const DailyChecklist: React.FC = () => {
   const handleDeleteTask = (id: string) => {
     if (confirm('Delete this routine task?')) {
       const nextList = routineItems.filter((t) => t.id !== id);
-      StorageService.saveRoutine(nextList);
+      StorageService.saveRoutine(nextList, selectedDate);
       setRoutineItems(nextList);
     }
   };
@@ -198,6 +207,80 @@ export const DailyChecklist: React.FC = () => {
 
   const isToday = selectedDate === new Date().toISOString().slice(0, 10);
 
+  const daysOfWeekList = [
+    { label: 'MON', day: 1, name: 'Monday' },
+    { label: 'TUE', day: 2, name: 'Tuesday' },
+    { label: 'WED', day: 3, name: 'Wednesday' },
+    { label: 'THU', day: 4, name: 'Thursday' },
+    { label: 'FRI', day: 5, name: 'Friday' },
+    { label: 'SAT', day: 6, name: 'Saturday' },
+    { label: 'SUN', day: 0, name: 'Sunday' }
+  ];
+
+  const currentDayOfWeek = new Date(selectedDate + 'T12:00:00').getDay();
+
+  const jumpToDayInWeek = (targetDay: number) => {
+    const d = new Date(selectedDate + 'T12:00:00');
+    const currentDay = d.getDay();
+    const diff = targetDay - currentDay;
+    d.setDate(d.getDate() + diff);
+    setSelectedDate(d.toISOString().slice(0, 10));
+  };
+
+  const daySummaries: Record<number, { title: string; subtitle: string; badge: string; border: string; bg: string }> = {
+    0: {
+      title: 'Sunday Routine: Chapterwise Mock Test & Full Rest Day',
+      subtitle: '08:00 AM Wake Up • 09:30–12:30 NEET Chapterwise Mock Test Sprint • Rest of Day Designated as Free Time',
+      badge: '🎯 8:00 AM Wake Up • 9:30–12:30 Mock Test',
+      border: 'border-amber-500/30',
+      bg: 'from-amber-500/15 via-orange-500/5 to-transparent text-amber-300'
+    },
+    1: {
+      title: 'Monday Routine: College Classes & High-Yield NEET',
+      subtitle: 'Morning & Evening NEET Blocks • 14:00–18:50 Classes (UI/UX, Deep Learning, Cyber Sec, Metrics, Coding)',
+      badge: '📚 5 SJT Classes (2:00–6:50 PM)',
+      border: 'border-indigo-500/30',
+      bg: 'from-indigo-500/15 via-blue-500/5 to-transparent text-indigo-300'
+    },
+    2: {
+      title: 'Tuesday Routine: College Classes & High-Yield NEET',
+      subtitle: 'Morning & Evening NEET Blocks • 14:00–17:50 Classes (Software Metrics, Coding, SCM, Design Patterns)',
+      badge: '📚 4 SJT Classes (2:00–5:50 PM)',
+      border: 'border-indigo-500/30',
+      bg: 'from-indigo-500/15 via-blue-500/5 to-transparent text-indigo-300'
+    },
+    3: {
+      title: 'Wednesday Routine: College Classes & High-Yield NEET',
+      subtitle: 'Morning & Evening NEET Blocks • 14:00–17:50 Classes (Design Patterns, UI/UX, Deep Learning, Cyber Sec)',
+      badge: '📚 4 SJT Classes (2:00–5:50 PM)',
+      border: 'border-indigo-500/30',
+      bg: 'from-indigo-500/15 via-blue-500/5 to-transparent text-indigo-300'
+    },
+    4: {
+      title: 'Thursday Routine: UI/UX Lab & Classes + NEET',
+      subtitle: 'Morning NEET • 11:40–13:20 UI/UX Lab (SJT217) • 14:00–17:50 Classes (Cyber, Metrics, Coding, SCM)',
+      badge: '🔬 UI/UX Lab (SJT217) + 4 Classes',
+      border: 'border-purple-500/30',
+      bg: 'from-purple-500/15 via-indigo-500/5 to-transparent text-purple-300'
+    },
+    5: {
+      title: 'Friday Routine: College Classes & High-Yield NEET',
+      subtitle: 'Morning & Evening NEET Blocks • 14:00–17:50 Classes (SCM, Design Patterns, UI/UX, Deep Learning)',
+      badge: '📚 4 SJT Classes (2:00–5:50 PM)',
+      border: 'border-indigo-500/30',
+      bg: 'from-indigo-500/15 via-blue-500/5 to-transparent text-indigo-300'
+    },
+    6: {
+      title: 'Saturday Routine: Full NEET Study & 2–6:00 PM Class',
+      subtitle: 'Same 5-Day Morning NEET Routine • 14:00–18:00 College Class / Engineering Study • Evening 50 MCQ Sprint',
+      badge: '⚡ Saturday Class (2:00–6:00 PM) + NEET',
+      border: 'border-cyan-500/30',
+      bg: 'from-cyan-500/15 via-sky-500/5 to-transparent text-cyan-300'
+    }
+  };
+
+  const activeDaySummary = daySummaries[currentDayOfWeek] || daySummaries[1];
+
   const categoryColor: Record<DailyRoutineItem['category'], string> = {
     study: 'border-l-sky-400 bg-sky-500/10 text-sky-300',
     personal: 'border-l-teal-400 bg-teal-500/10 text-teal-300',
@@ -216,7 +299,10 @@ export const DailyChecklist: React.FC = () => {
             <div className="flex items-center gap-2 mb-1">
               <CheckSquare className="w-5 h-5 text-sky-400" />
               <span className="text-xs font-extrabold px-2.5 py-0.5 rounded-full bg-sky-500/20 text-sky-300 border border-sky-500/30">
-                14-Block Daily Timetable
+                {routineItems.length}-Block Day Schedule
+              </span>
+              <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                {activeDaySummary.badge}
               </span>
               {isToday && (
                 <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 animate-pulse">
@@ -225,10 +311,10 @@ export const DailyChecklist: React.FC = () => {
               )}
             </div>
             <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight">
-              Daily Routine & Checklist
+              {activeDaySummary.title}
             </h2>
             <p className="text-xs text-slate-300 mt-0.5">
-              Disciplined college timetable & 6-hour NEET study schedule with missed task tracking.
+              {activeDaySummary.subtitle}
             </p>
           </div>
 
@@ -250,8 +336,34 @@ export const DailyChecklist: React.FC = () => {
           </div>
         </div>
 
+        {/* Day-of-Week Switcher Pills */}
+        <div className="mt-3.5 pt-3 border-t border-white/10 flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-1.5 overflow-x-auto py-1 max-w-full">
+            {daysOfWeekList.map((item) => {
+              const isSelected = currentDayOfWeek === item.day;
+              return (
+                <button
+                  key={item.day}
+                  onClick={() => jumpToDayInWeek(item.day)}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all ${
+                    isSelected
+                      ? 'bg-sky-500 text-white shadow-md shadow-sky-500/25 scale-105 border border-sky-300/40'
+                      : 'bg-slate-900/80 text-slate-400 hover:text-white hover:bg-slate-800 border border-white/5'
+                  }`}
+                >
+                  {item.label}
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="text-[11px] text-slate-400 font-medium">
+            {new Date(selectedDate + 'T12:00:00').toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })}
+          </div>
+        </div>
+
         {/* Date Navigator & Current Time Banner */}
-        <div className="mt-4 p-3 rounded-xl bg-slate-900/90 border border-white/10 flex flex-wrap items-center justify-between gap-3">
+        <div className="mt-3 p-3 rounded-xl bg-slate-900/90 border border-white/10 flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <button
               onClick={() => changeDateBy(-1)}

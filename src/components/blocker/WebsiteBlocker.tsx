@@ -131,7 +131,23 @@ export const WebsiteBlocker: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string>('all');
   const [displayLimit, setDisplayLimit] = useState(50);
-  const [isChecklistExpanded, setIsChecklistExpanded] = useState(true);
+  const [isChecklistExpanded, setIsChecklistExpanded] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('focusforge_18plus_checklist_expanded') === 'true';
+    } catch {
+      return false;
+    }
+  });
+
+  const toggleChecklistExpanded = () => {
+    setIsChecklistExpanded(prev => {
+      const next = !prev;
+      try {
+        localStorage.setItem('focusforge_18plus_checklist_expanded', String(next));
+      } catch {}
+      return next;
+    });
+  };
   const domainInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -264,9 +280,10 @@ export const WebsiteBlocker: React.FC = () => {
     const nextState = !isAdultShieldEnabled;
     setIsAdultShieldEnabled(nextState);
     if (nextState) {
-      setStatusMessage('18+ & Hentai Shield activated immediately.');
+      setSelected18PlusCategories(CHECKLIST_CATEGORIES.map(c => c.category));
+      setStatusMessage('Hesitation is Defeat: 18+ Shield activated.');
     } else {
-      setStatusMessage('18+ & Hentai Shield deactivated immediately.');
+      setStatusMessage('18+ Shield deactivated.');
     }
   };
 
@@ -548,217 +565,95 @@ export const WebsiteBlocker: React.FC = () => {
       </div>
 
       {/* ========================================================================= */}
-      {/* SINGLE CONSOLIDATED 18+ & HENTAI SHIELD CARD (WITH SAMURAI ARTWORK & CHECKLIST) */}
+      {/* HESITATION IS DEFEAT - NEET ASPIRANT DEDICATED SHIELD CARD */}
       {/* ========================================================================= */}
       <Card
         className={`overflow-hidden border transition-all ${
-          isAdultShieldEnabled && selected18PlusCategories.length > 0
-            ? 'border-rose-500/40 bg-gradient-to-br from-[#1C2541] via-[#1a1429] to-[#0B132B] shadow-lg shadow-rose-950/20'
+          isAdultShieldEnabled
+            ? 'border-rose-500/50 bg-gradient-to-br from-[#1C2541] via-[#1a1429] to-[#0B132B] shadow-xl shadow-rose-950/30'
             : 'border-slate-800 bg-[#1C2541]/70'
         }`}
       >
-        {/* Banner with Sekiro Samurai Mascot Artwork */}
-        <div className="relative bg-gradient-to-r from-black via-slate-950 to-rose-950/50 p-4 sm:p-5 border-b border-white/10">
-          <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6">
-            {/* Samurai Mascot Image */}
+        <div className="relative bg-gradient-to-r from-black via-slate-950 to-rose-950/50 p-5 sm:p-6 border-b border-white/10">
+          <div className="flex flex-col sm:flex-row items-center gap-5 sm:gap-6">
+            {/* Samurai Mascot Image with full visibility */}
             <div className="relative shrink-0 group">
-              <div className="w-24 h-36 sm:w-28 sm:h-44 rounded-xl overflow-hidden border-2 border-rose-500/50 shadow-md shadow-rose-500/20 bg-black flex items-center justify-center">
+              <div className="w-28 h-44 sm:w-32 sm:h-52 rounded-2xl overflow-hidden border-2 border-rose-500/60 shadow-lg shadow-rose-500/30 bg-black flex items-center justify-center p-1">
                 <img
-                  src="/hesitation_is_defeat.png"
-                  alt="Hesitation is Defeat - Sekiro Blocker Mascot"
-                  className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-300"
+                  src="./hesitation_is_defeat.png"
+                  alt="Hesitation is Defeat"
+                  className="w-full h-full object-contain rounded-xl"
                   onError={(e) => {
-                    // Fallback if image path differs
-                    (e.currentTarget as HTMLImageElement).src = '/img_blocker_mascot.jpg';
+                    (e.currentTarget as HTMLImageElement).src = '/hesitation_is_defeat.png';
                   }}
                 />
               </div>
-              <div className="absolute -bottom-2 -right-2 bg-rose-600 text-white text-[9px] font-black tracking-wider px-2 py-0.5 rounded-full border border-rose-400 uppercase shadow">
+              <div className="absolute -bottom-2 -right-2 bg-rose-600 text-white text-[10px] font-black tracking-wider px-2.5 py-0.5 rounded-full border border-rose-400 uppercase shadow-md">
                 死 DEFEAT
               </div>
             </div>
 
-            {/* Mascot Headline & Shield Controls */}
-            <div className="flex-1 min-w-0 text-center sm:text-left space-y-2">
+            {/* Mascot Headline & Personal NEET MBBS Goal */}
+            <div className="flex-1 min-w-0 text-center sm:text-left space-y-3">
               <div className="flex items-center justify-center sm:justify-start gap-2 flex-wrap">
-                <span className="text-[10px] font-black uppercase tracking-widest px-2.5 py-0.5 rounded-full bg-rose-500/20 text-rose-400 border border-rose-500/40">
+                <span className="text-[11px] font-black uppercase tracking-widest px-3 py-1 rounded-full bg-rose-500/20 text-rose-400 border border-rose-500/50 shadow-sm">
                   HESITATION IS DEFEAT
                 </span>
                 <span
-                  className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
-                    isAdultShieldEnabled && selected18PlusCategories.length > 0
-                      ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
+                  className={`text-[11px] font-bold px-3 py-1 rounded-full border ${
+                    isAdultShieldEnabled
+                      ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40 shadow-sm'
                       : 'bg-slate-800 text-slate-400 border-slate-700'
                   }`}
                 >
-                  {isAdultShieldEnabled && selected18PlusCategories.length > 0
-                    ? `${activeCuratedDomainsCount} Domains Sinkholed`
-                    : 'Shield Disabled'}
+                  {isAdultShieldEnabled ? 'Shield Active (Zero Distraction)' : 'Shield Disabled'}
                 </span>
               </div>
 
-              <h3 className="text-lg sm:text-xl font-extrabold text-white tracking-tight flex items-center justify-center sm:justify-start gap-2">
-                <ShieldCheck className="w-5 h-5 text-rose-400 shrink-0" />
-                <span>18+ Adult &amp; Porn Shield</span>
-              </h3>
+              <div>
+                <h3 className="text-xl sm:text-2xl font-black text-white tracking-tight flex items-center justify-center sm:justify-start gap-2">
+                  <span>Hesitation is Defeat</span>
+                </h3>
+                <p className="text-base sm:text-lg font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-rose-400 via-pink-300 to-amber-200 mt-1">
+                  You need to be Doctor MBBS Rajendira Sozhan P
+                </p>
+              </div>
 
-              <p className="text-xs text-slate-300 leading-relaxed max-w-xl">
-                One-touch 18+ and adult content protection. Blocks explicit adult tubes, hentai anime streaming, manhwa, manga, and doujinshi archives with zero delay.
+              <p className="text-xs sm:text-sm text-slate-300 leading-relaxed max-w-xl">
+                Absolute focus. No adult content, no manga or manhwa rabbit holes, no hesitation. Every second counts toward your white coat and stethoscope.
               </p>
 
-              {/* Master Switch Row */}
+              {/* Master Switch Button */}
               <div className="pt-2 flex flex-wrap items-center justify-center sm:justify-start gap-3">
                 <button
                   type="button"
                   onClick={handleToggleMasterShield}
-                  className={`inline-flex items-center gap-2.5 px-4 py-2.5 rounded-xl text-xs font-bold transition-all shadow-sm ${
+                  className={`inline-flex items-center gap-2.5 px-5 py-3 rounded-xl text-xs sm:text-sm font-bold transition-all shadow-md active:scale-95 ${
                     isAdultShieldEnabled
-                      ? 'bg-rose-600 hover:bg-rose-500 text-white shadow-rose-600/30'
+                      ? 'bg-rose-600 hover:bg-rose-500 text-white shadow-rose-600/40'
                       : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700'
                   }`}
-                  title={isAdultShieldEnabled ? 'Disable 18+ Shield' : 'Enable 18+ Shield'}
+                  title={isAdultShieldEnabled ? 'Disable Shield' : 'Enable Shield'}
                 >
                   <Power className="w-4 h-4" />
                   <span>{isAdultShieldEnabled ? '18+ Shield ACTIVE (Click to Turn Off)' : 'Turn ON 18+ Shield'}</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setIsChecklistExpanded(!isChecklistExpanded)}
-                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-slate-900/80 hover:bg-slate-800 border border-slate-700 text-slate-200 transition-colors"
-                >
-                  <CheckSquare className="w-3.5 h-3.5 text-rose-400" />
-                  <span>{isChecklistExpanded ? 'Hide Categories' : 'Customize Categories'}</span>
-                  {isChecklistExpanded ? (
-                    <ChevronUp className="w-3.5 h-3.5 text-slate-400" />
-                  ) : (
-                    <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
-                  )}
                 </button>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Retractable Category Checklist Section */}
-        <div className="p-4 sm:p-5 space-y-3">
-          {/* Retractable Accordion Header */}
-          <div
-            onClick={() => setIsChecklistExpanded(!isChecklistExpanded)}
-            className="flex items-center justify-between p-3 rounded-xl bg-slate-900/70 hover:bg-slate-900 border border-slate-800 cursor-pointer transition-colors select-none"
-          >
-            <div className="flex items-center gap-2 flex-wrap">
-              <CheckSquare className="w-4 h-4 text-rose-400 shrink-0" />
-              <span className="text-xs font-bold text-slate-200 uppercase tracking-wider">
-                18+ Category Selector Checklist
-              </span>
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/30">
-                {selected18PlusCategories.length} of {CHECKLIST_CATEGORIES.length} selected
-              </span>
-            </div>
-
-            <div className="flex items-center gap-2 shrink-0">
-              {isChecklistExpanded && (
-                <div className="flex items-center gap-1 mr-1" onClick={(e) => e.stopPropagation()}>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleSelectAllCategories}
-                    className="text-[11px] text-rose-300 hover:bg-rose-500/10 px-2 py-0.5 h-auto"
-                  >
-                    Select All
-                  </Button>
-                  <span className="text-slate-600 text-xs">|</span>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleClearAllCategories}
-                    className="text-[11px] text-slate-400 hover:bg-slate-800 px-2 py-0.5 h-auto"
-                  >
-                    Clear All
-                  </Button>
-                </div>
-              )}
-              {isChecklistExpanded ? (
-                <ChevronUp className="w-4 h-4 text-slate-400" />
-              ) : (
-                <ChevronDown className="w-4 h-4 text-slate-400" />
-              )}
-            </div>
+        {/* Smart Keyword & Domain Guard Footer */}
+        <div className="p-3.5 sm:p-4 bg-slate-950/60 border-t border-rose-500/10 flex items-center justify-between text-xs text-slate-400">
+          <div className="flex items-center gap-2">
+            <ShieldAlert className="w-4 h-4 text-rose-400 shrink-0" />
+            <span className="text-[11px] font-medium text-slate-300">
+              Automatic On-Device URL &amp; Keyword Sinkhole Active (18+, Hentai, Manhwa, Porn)
+            </span>
           </div>
-
-          {/* Retractable Category Items (Titles only - NO website lists or individual switches!) */}
-          {isChecklistExpanded && (
-            <div className="space-y-2 pt-1 animate-in fade-in duration-200">
-              {CHECKLIST_CATEGORIES.map(cat => {
-                const isChecked = selected18PlusCategories.includes(cat.category);
-                const isEffectivelyActive = isAdultShieldEnabled && isChecked;
-
-                return (
-                  <div
-                    key={cat.id}
-                    onClick={() => toggle18PlusCategory(cat.category)}
-                    className={`p-3 rounded-xl border cursor-pointer transition-all flex items-center justify-between gap-3 ${
-                      isEffectivelyActive
-                        ? `${cat.borderActive} shadow-sm`
-                        : isChecked
-                        ? 'border-slate-700 bg-slate-900/90'
-                        : 'border-slate-800/80 bg-slate-900/40 hover:bg-slate-900/70 hover:border-slate-700'
-                    }`}
-                    role="checkbox"
-                    aria-checked={isChecked}
-                    tabIndex={0}
-                  >
-                    {/* Left: Checkbox + Icon + Title */}
-                    <div className="flex items-center gap-3 min-w-0 flex-1">
-                      <div className="shrink-0">
-                        {isChecked ? (
-                          <div className="w-5 h-5 rounded-md bg-rose-600 text-white flex items-center justify-center shadow">
-                            <Check className="w-3.5 h-3.5 stroke-[3]" />
-                          </div>
-                        ) : (
-                          <div className="w-5 h-5 rounded-md border-2 border-slate-600 bg-slate-800/80 hover:border-slate-400 transition-colors" />
-                        )}
-                      </div>
-
-                      <span className="text-xl select-none shrink-0">{cat.icon}</span>
-
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-xs sm:text-sm font-bold text-white tracking-tight">
-                            {cat.title}
-                          </span>
-                          {isEffectivelyActive && (
-                            <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-                              Active
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Right: Clean Domain count badge */}
-                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border shrink-0 ${cat.badgeClass}`}>
-                      {cat.totalCount} Domains
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-
-          {/* Smart Keyword Guard Callout */}
-          <div className="p-3.5 rounded-xl bg-slate-900/90 border border-rose-500/20 flex items-start gap-3 text-xs text-slate-300 mt-2">
-            <ShieldAlert className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
-            <div className="space-y-1">
-              <p className="font-bold text-white flex items-center gap-1.5">
-                <span>Smart On-Device Wildcard Keyword Guard</span>
-              </p>
-              <p className="text-[11px] text-slate-400 leading-relaxed">
-                When 18+ Shield is active, any browser URL containing keywords (such as <code className="text-rose-300 bg-slate-800 px-1 py-0.5 rounded">hentai</code>, <code className="text-rose-300 bg-slate-800 px-1 py-0.5 rounded">manhwa18</code>, <code className="text-rose-300 bg-slate-800 px-1 py-0.5 rounded">manga18</code>, <code className="text-rose-300 bg-slate-800 px-1 py-0.5 rounded">pornhwa</code>, <code className="text-rose-300 bg-slate-800 px-1 py-0.5 rounded">doujin</code>, <code className="text-rose-300 bg-slate-800 px-1 py-0.5 rounded">dojin</code>, <code className="text-rose-300 bg-slate-800 px-1 py-0.5 rounded">porn</code>, <code className="text-rose-300 bg-slate-800 px-1 py-0.5 rounded">xxx</code>) is immediately intercepted and blocked, neutralizing mirror sites automatically.
-              </p>
-            </div>
-          </div>
+          <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-rose-500/10 text-rose-300 border border-rose-500/20">
+            MBBS 2027
+          </span>
         </div>
       </Card>
 

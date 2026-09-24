@@ -8,22 +8,154 @@ export interface DailyRoutineItem {
   defaultCompleted?: boolean;
 }
 
-export const DEFAULT_DAILY_ROUTINE: DailyRoutineItem[] = [
-  { id: 'rt-1', time: '05:00–07:00', task: 'NEET Study Block 1', category: 'study' },
-  { id: 'rt-2', time: '07:00–07:30', task: 'Breakfast and bath', category: 'personal' },
-  { id: 'rt-3', time: '07:30–10:00', task: 'NEET Study Block 2', category: 'study' },
-  { id: 'rt-4', time: '10:00–10:15', task: 'Break', category: 'break' },
-  { id: 'rt-5', time: '10:15–11:45', task: 'NEET Study Block 3', category: 'study' },
-  { id: 'rt-6', time: '11:45–12:00', task: 'Break', category: 'break' },
-  { id: 'rt-7', time: '12:00–13:00', task: 'NEET Study Block 4', category: 'study' },
-  { id: 'rt-8', time: '13:00–14:00', task: 'Lunch', category: 'personal' },
-  { id: 'rt-9', time: '14:00–18:00', task: 'College', category: 'college' },
-  { id: 'rt-10', time: '18:00–18:30', task: 'Badminton', category: 'exercise' },
-  { id: 'rt-11', time: '18:30–19:30', task: 'Study Block 5', category: 'study' },
-  { id: 'rt-12', time: '19:30–20:00', task: 'Dinner', category: 'personal' },
-  { id: 'rt-13', time: '20:00–21:45', task: 'Question solving', category: 'study' },
-  { id: 'rt-14', time: '22:00', task: 'Sleep', category: 'sleep' }
+// --- DAY-SPECIFIC TIMETABLES & ROUTINES ---
+
+export const ROUTINE_MONDAY: DailyRoutineItem[] = [
+  { id: 'rt-mon-1', time: '05:00–07:00', task: 'NEET Study Block 1: Physics (Mechanics & Laws of Motion)', category: 'study' },
+  { id: 'rt-mon-2', time: '07:00–07:30', task: 'Breakfast and Bath (Morning Refresh)', category: 'personal' },
+  { id: 'rt-mon-3', time: '07:30–10:00', task: 'NEET Study Block 2: Chemistry (Organic / Physical Numericals)', category: 'study' },
+  { id: 'rt-mon-4', time: '10:00–10:15', task: 'Morning Break (Hydration & Stretch)', category: 'break' },
+  { id: 'rt-mon-5', time: '10:15–11:45', task: 'NEET Study Block 3: Botany (NCERT Line-by-Line Reading)', category: 'study' },
+  { id: 'rt-mon-6', time: '11:45–12:00', task: 'Midday Break (Eye Rest)', category: 'break' },
+  { id: 'rt-mon-7', time: '12:00–13:00', task: 'NEET Study Block 4: Zoology (Human Physiology High-Yield)', category: 'study' },
+  { id: 'rt-mon-8', time: '13:00–14:00', task: 'Lunch & Travel to College', category: 'personal' },
+  { id: 'rt-mon-9', time: '14:00–14:50', task: 'UI/UX Design - TH (A2+TA2 - SJT221)', category: 'college' },
+  { id: 'rt-mon-10', time: '15:00–15:50', task: 'Deep Learning - TH (F2+TF2 - SJT619)', category: 'college' },
+  { id: 'rt-mon-11', time: '16:00–16:50', task: 'Cyber Security - TH (D2+TD2 - SJTG24)', category: 'college' },
+  { id: 'rt-mon-12', time: '17:00–17:50', task: 'Software Metrics - TH (B2+TB2 - SJT115)', category: 'college' },
+  { id: 'rt-mon-13', time: '18:00–18:50', task: 'Adv Competitive Coding - I - SS (G2+TG2 - SJT619)', category: 'college' },
+  { id: 'rt-mon-14', time: '18:50–19:15', task: 'Evening Refresh & Tea Break', category: 'break' },
+  { id: 'rt-mon-15', time: '19:15–20:00', task: 'NEET Study Block 5: Spaced Revision & Formula Sheets', category: 'study' },
+  { id: 'rt-mon-16', time: '20:00–20:30', task: 'Dinner & Family Time', category: 'personal' },
+  { id: 'rt-mon-17', time: '20:30–22:00', task: 'NEET Question Solving Block 6 (50 MCQ Speed Sprint)', category: 'study' },
+  { id: 'rt-mon-18', time: '22:00–05:00', task: 'Bedtime Sleep (Recovery)', category: 'sleep' }
 ];
+
+export const ROUTINE_TUESDAY: DailyRoutineItem[] = [
+  { id: 'rt-tue-1', time: '05:00–07:00', task: 'NEET Study Block 1: Physics (Mechanics Problem Solving)', category: 'study' },
+  { id: 'rt-tue-2', time: '07:00–07:30', task: 'Breakfast and Bath (Morning Refresh)', category: 'personal' },
+  { id: 'rt-tue-3', time: '07:30–10:00', task: 'NEET Study Block 2: Chemistry (Inorganic Trends & NCERT)', category: 'study' },
+  { id: 'rt-tue-4', time: '10:00–10:15', task: 'Morning Break (Hydration & Stretch)', category: 'break' },
+  { id: 'rt-tue-5', time: '10:15–11:45', task: 'NEET Study Block 3: Botany (Plant Physiology Focus)', category: 'study' },
+  { id: 'rt-tue-6', time: '11:45–12:00', task: 'Midday Break (Eye Rest)', category: 'break' },
+  { id: 'rt-tue-7', time: '12:00–13:00', task: 'NEET Study Block 4: Zoology (Animal Kingdom / Genetics)', category: 'study' },
+  { id: 'rt-tue-8', time: '13:00–14:00', task: 'Lunch & Travel to College', category: 'personal' },
+  { id: 'rt-tue-9', time: '14:00–14:50', task: 'Software Metrics - TH (B2+TB2 - SJT115)', category: 'college' },
+  { id: 'rt-tue-10', time: '15:00–15:50', task: 'Adv Competitive Coding - I - SS (G2+TG2 - SJT619)', category: 'college' },
+  { id: 'rt-tue-11', time: '16:00–16:50', task: 'Software Configuration Management - TH (E2+TE2 - SJT204)', category: 'college' },
+  { id: 'rt-tue-12', time: '17:00–17:50', task: 'Design Patterns - TH (C2+TC2 - SJT114)', category: 'college' },
+  { id: 'rt-tue-13', time: '17:50–18:30', task: 'Badminton / Fitness & Refresh', category: 'exercise' },
+  { id: 'rt-tue-14', time: '18:30–19:30', task: 'NEET Study Block 5: Spaced Revision (Physics / Chemistry)', category: 'study' },
+  { id: 'rt-tue-15', time: '19:30–20:00', task: 'Dinner', category: 'personal' },
+  { id: 'rt-tue-16', time: '20:00–21:45', task: 'NEET Question Solving Block 6 (50 MCQ Sprint)', category: 'study' },
+  { id: 'rt-tue-17', time: '21:45–22:00', task: 'Night Routine & Wind Down', category: 'personal' },
+  { id: 'rt-tue-18', time: '22:00–05:00', task: 'Bedtime Sleep (Recovery)', category: 'sleep' }
+];
+
+export const ROUTINE_WEDNESDAY: DailyRoutineItem[] = [
+  { id: 'rt-wed-1', time: '05:00–07:00', task: 'NEET Study Block 1: Physics (Electrodynamics & Optics)', category: 'study' },
+  { id: 'rt-wed-2', time: '07:00–07:30', task: 'Breakfast and Bath (Morning Refresh)', category: 'personal' },
+  { id: 'rt-wed-3', time: '07:30–10:00', task: 'NEET Study Block 2: Chemistry (Physical Chemistry Calculations)', category: 'study' },
+  { id: 'rt-wed-4', time: '10:00–10:15', task: 'Morning Break (Hydration & Stretch)', category: 'break' },
+  { id: 'rt-wed-5', time: '10:15–11:45', task: 'NEET Study Block 3: Botany (Genetics & Biotechnology)', category: 'study' },
+  { id: 'rt-wed-6', time: '11:45–12:00', task: 'Midday Break (Eye Rest)', category: 'break' },
+  { id: 'rt-wed-7', time: '12:00–13:00', task: 'NEET Study Block 4: Zoology (Cell Biology & Genetics)', category: 'study' },
+  { id: 'rt-wed-8', time: '13:00–14:00', task: 'Lunch & Travel to College', category: 'personal' },
+  { id: 'rt-wed-9', time: '14:00–14:50', task: 'Design Patterns - TH (C2+TC2 - SJT114)', category: 'college' },
+  { id: 'rt-wed-10', time: '15:00–15:50', task: 'UI/UX Design - TH (A2+TA2 - SJT221)', category: 'college' },
+  { id: 'rt-wed-11', time: '16:00–16:50', task: 'Deep Learning - TH (F2+TF2 - SJT619)', category: 'college' },
+  { id: 'rt-wed-12', time: '17:00–17:50', task: 'Cyber Security - TH (D2+TD2 - SJTG24)', category: 'college' },
+  { id: 'rt-wed-13', time: '17:50–18:30', task: 'Badminton / Fitness & Refresh', category: 'exercise' },
+  { id: 'rt-wed-14', time: '18:30–19:30', task: 'NEET Study Block 5: Spaced Revision (Botany / Zoology)', category: 'study' },
+  { id: 'rt-wed-15', time: '19:30–20:00', task: 'Dinner', category: 'personal' },
+  { id: 'rt-wed-16', time: '20:00–21:45', task: 'NEET Question Solving Block 6 (50 MCQ Sprint)', category: 'study' },
+  { id: 'rt-wed-17', time: '21:45–22:00', task: 'Night Routine & Wind Down', category: 'personal' },
+  { id: 'rt-wed-18', time: '22:00–05:00', task: 'Bedtime Sleep (Recovery)', category: 'sleep' }
+];
+
+export const ROUTINE_THURSDAY: DailyRoutineItem[] = [
+  { id: 'rt-thu-1', time: '05:00–07:00', task: 'NEET Study Block 1: Physics (Modern Physics & Thermodynamics)', category: 'study' },
+  { id: 'rt-thu-2', time: '07:00–07:30', task: 'Breakfast and Bath (Morning Refresh)', category: 'personal' },
+  { id: 'rt-thu-3', time: '07:30–10:00', task: 'NEET Study Block 2: Chemistry (Coordination & Organic Reactions)', category: 'study' },
+  { id: 'rt-thu-4', time: '10:00–10:15', task: 'Morning Break (Hydration & Stretch)', category: 'break' },
+  { id: 'rt-thu-5', time: '10:15–11:30', task: 'NEET Study Block 3: Biology (NCERT Intensive Line-by-Line)', category: 'study' },
+  { id: 'rt-thu-6', time: '11:40–13:20', task: 'UI/UX Design Lab - LO (L23+L24 - SJT217)', category: 'college' },
+  { id: 'rt-thu-7', time: '13:20–14:00', task: 'Lunch Break & Travel to Class', category: 'personal' },
+  { id: 'rt-thu-8', time: '14:00–14:50', task: 'Cyber Security - TH (D2+TD2 - SJTG24)', category: 'college' },
+  { id: 'rt-thu-9', time: '15:00–15:50', task: 'Software Metrics - TH (B2+TB2 - SJT115)', category: 'college' },
+  { id: 'rt-thu-10', time: '16:00–16:50', task: 'Adv Competitive Coding - I - SS (G2+TG2 - SJT619)', category: 'college' },
+  { id: 'rt-thu-11', time: '17:00–17:50', task: 'Software Configuration Management - TH (E2+TE2 - SJT204)', category: 'college' },
+  { id: 'rt-thu-12', time: '17:50–18:30', task: 'Badminton / Fitness & Refresh', category: 'exercise' },
+  { id: 'rt-thu-13', time: '18:30–19:30', task: 'NEET Study Block 5: Spaced Revision (Physics / Chemistry)', category: 'study' },
+  { id: 'rt-thu-14', time: '19:30–20:00', task: 'Dinner', category: 'personal' },
+  { id: 'rt-thu-15', time: '20:00–21:45', task: 'NEET Question Solving Block 6 (50 MCQ Sprint)', category: 'study' },
+  { id: 'rt-thu-16', time: '21:45–22:00', task: 'Night Routine & Wind Down', category: 'personal' },
+  { id: 'rt-thu-17', time: '22:00–05:00', task: 'Bedtime Sleep (Recovery)', category: 'sleep' }
+];
+
+export const ROUTINE_FRIDAY: DailyRoutineItem[] = [
+  { id: 'rt-fri-1', time: '05:00–07:00', task: 'NEET Study Block 1: Physics (Full Syllabus Numericals)', category: 'study' },
+  { id: 'rt-fri-2', time: '07:00–07:30', task: 'Breakfast and Bath (Morning Refresh)', category: 'personal' },
+  { id: 'rt-fri-3', time: '07:30–10:00', task: 'NEET Study Block 2: Chemistry (Organic Mechanisms & Reactions)', category: 'study' },
+  { id: 'rt-fri-4', time: '10:00–10:15', task: 'Morning Break (Hydration & Stretch)', category: 'break' },
+  { id: 'rt-fri-5', time: '10:15–11:45', task: 'NEET Study Block 3: Botany (Ecology & Environment)', category: 'study' },
+  { id: 'rt-fri-6', time: '11:45–12:00', task: 'Midday Break (Eye Rest)', category: 'break' },
+  { id: 'rt-fri-7', time: '12:00–13:00', task: 'NEET Study Block 4: Zoology (Human Reproduction & Health)', category: 'study' },
+  { id: 'rt-fri-8', time: '13:00–14:00', task: 'Lunch & Travel to College', category: 'personal' },
+  { id: 'rt-fri-9', time: '14:00–14:50', task: 'Software Configuration Management - TH (E2+TE2 - SJT204)', category: 'college' },
+  { id: 'rt-fri-10', time: '15:00–15:50', task: 'Design Patterns - TH (C2+TC2 - SJT114)', category: 'college' },
+  { id: 'rt-fri-11', time: '16:00–16:50', task: 'UI/UX Design - TH (A2+TA2 - SJT221)', category: 'college' },
+  { id: 'rt-fri-12', time: '17:00–17:50', task: 'Deep Learning - TH (F2+TF2 - SJT619)', category: 'college' },
+  { id: 'rt-fri-13', time: '17:50–18:30', task: 'Badminton / Fitness & Refresh', category: 'exercise' },
+  { id: 'rt-fri-14', time: '18:30–19:30', task: 'NEET Study Block 5: Weekly Topic Synthesis', category: 'study' },
+  { id: 'rt-fri-15', time: '19:30–20:00', task: 'Dinner', category: 'personal' },
+  { id: 'rt-fri-16', time: '20:00–21:45', task: 'NEET Question Solving Block 6 (50 MCQ Sprint)', category: 'study' },
+  { id: 'rt-fri-17', time: '21:45–22:00', task: 'Night Routine & Saturday Prep', category: 'personal' },
+  { id: 'rt-fri-18', time: '22:00–05:00', task: 'Bedtime Sleep (Recovery)', category: 'sleep' }
+];
+
+export const ROUTINE_SATURDAY: DailyRoutineItem[] = [
+  { id: 'rt-sat-1', time: '05:00–07:00', task: 'NEET Study Block 1: Physics (Weak Areas Review & Numerical Practice)', category: 'study' },
+  { id: 'rt-sat-2', time: '07:00–07:30', task: 'Breakfast and Bath (Morning Refresh)', category: 'personal' },
+  { id: 'rt-sat-3', time: '07:30–10:00', task: 'NEET Study Block 2: Chemistry (Formulas & Reaction Drills)', category: 'study' },
+  { id: 'rt-sat-4', time: '10:00–10:15', task: 'Morning Break (Hydration & Stretch)', category: 'break' },
+  { id: 'rt-sat-5', time: '10:15–11:45', task: 'NEET Study Block 3: Botany (NCERT Diagram & Tables Revision)', category: 'study' },
+  { id: 'rt-sat-6', time: '11:45–12:00', task: 'Midday Break (Eye Rest)', category: 'break' },
+  { id: 'rt-sat-7', time: '12:00–13:00', task: 'NEET Study Block 4: Zoology (PYQs & Rapid Fire Drills)', category: 'study' },
+  { id: 'rt-sat-8', time: '13:00–14:00', task: 'Lunch & Midday Rest', category: 'personal' },
+  { id: 'rt-sat-9', time: '14:00–18:00', task: 'College Class / Engineering Lab & Project Study', category: 'college' },
+  { id: 'rt-sat-10', time: '18:00–18:30', task: 'Badminton / Fitness & Refresh', category: 'exercise' },
+  { id: 'rt-sat-11', time: '18:30–19:30', task: 'NEET Study Block 5: Sunday Mock Test Pre-Review', category: 'study' },
+  { id: 'rt-sat-12', time: '19:30–20:00', task: 'Dinner', category: 'personal' },
+  { id: 'rt-sat-13', time: '20:00–21:45', task: 'NEET Question Solving Block 6 (50 High-Speed MCQ Sprint)', category: 'study' },
+  { id: 'rt-sat-14', time: '21:45–22:00', task: 'Sunday Mock Test Setup & Mindset Prep', category: 'personal' },
+  { id: 'rt-sat-15', time: '22:00–08:00', task: 'Bedtime Sleep (Full 10h Recovery Sleep until 8:00 AM)', category: 'sleep' }
+];
+
+export const ROUTINE_SUNDAY: DailyRoutineItem[] = [
+  { id: 'rt-sun-1', time: '08:00–09:00', task: 'Wake Up at 8:00 AM, Breakfast & Morning Refresh', category: 'personal' },
+  { id: 'rt-sun-2', time: '09:00–09:30', task: 'Mock Test Setup & Mindset Alignment (OMR & Formula Warmup)', category: 'study' },
+  { id: 'rt-sun-3', time: '09:30–12:30', task: 'NEET Chapterwise Mock Test Sprint (Physics, Chem, Biology)', category: 'study' },
+  { id: 'rt-sun-4', time: '12:30–13:30', task: 'Lunch & Post-Test Relaxation', category: 'personal' },
+  { id: 'rt-sun-5', time: '13:30–17:00', task: 'Free Time: Hobbies, Movies & Relaxation', category: 'break' },
+  { id: 'rt-sun-6', time: '17:00–19:30', task: 'Free Time: Evening Outing, Friends & Social Rest', category: 'break' },
+  { id: 'rt-sun-7', time: '19:30–20:30', task: 'Dinner with Family', category: 'personal' },
+  { id: 'rt-sun-8', time: '20:30–22:00', task: 'Free Time: Wind Down & Week Planning', category: 'break' },
+  { id: 'rt-sun-9', time: '22:00–05:00', task: 'Bedtime Sleep (Rest for Monday 5:00 AM Wake Up)', category: 'sleep' }
+];
+
+export const ROUTINES_BY_DAY: Record<number, DailyRoutineItem[]> = {
+  0: ROUTINE_SUNDAY,
+  1: ROUTINE_MONDAY,
+  2: ROUTINE_TUESDAY,
+  3: ROUTINE_WEDNESDAY,
+  4: ROUTINE_THURSDAY,
+  5: ROUTINE_FRIDAY,
+  6: ROUTINE_SATURDAY
+};
+
+export const DEFAULT_DAILY_ROUTINE: DailyRoutineItem[] = ROUTINE_MONDAY;
+
 
 export type MissedReason =
   | 'College'
@@ -142,6 +274,7 @@ export interface WeeklyBlueprint {
 const STORAGE_KEYS = {
   CHAPTERS: 'neet_tracker_chapters_v2',
   CUSTOM_ROUTINE: 'neet_tracker_routine_custom',
+  CUSTOM_ROUTINES_BY_DAY: 'neet_tracker_routines_by_day',
   DAILY_RECORDS: 'neet_tracker_daily_records',
   BLOCKED_APPS: 'neet_tracker_blocked_apps',
   BLOCKED_DOMAINS: 'neet_tracker_blocked_domains',
@@ -204,17 +337,59 @@ export class StorageService {
   }
 
   // ---------------- DAILY ROUTINE & CHECKLIST ----------------
-  static getRoutine(): DailyRoutineItem[] {
+  static getRoutineForDay(dayOfWeek: number): DailyRoutineItem[] {
     try {
-      const raw = localStorage.getItem(STORAGE_KEYS.CUSTOM_ROUTINE);
-      return raw ? JSON.parse(raw) : DEFAULT_DAILY_ROUTINE;
+      const rawMap = localStorage.getItem(STORAGE_KEYS.CUSTOM_ROUTINES_BY_DAY);
+      if (rawMap) {
+        const parsedMap = JSON.parse(rawMap);
+        if (parsedMap && parsedMap[dayOfWeek] && Array.isArray(parsedMap[dayOfWeek])) {
+          return parsedMap[dayOfWeek];
+        }
+      }
+      return ROUTINES_BY_DAY[dayOfWeek] || DEFAULT_DAILY_ROUTINE;
     } catch {
-      return DEFAULT_DAILY_ROUTINE;
+      return ROUTINES_BY_DAY[dayOfWeek] || DEFAULT_DAILY_ROUTINE;
     }
   }
 
-  static saveRoutine(items: DailyRoutineItem[]): void {
-    localStorage.setItem(STORAGE_KEYS.CUSTOM_ROUTINE, JSON.stringify(items));
+  static getRoutineForDate(dateStr: string): DailyRoutineItem[] {
+    try {
+      const d = new Date(dateStr + 'T12:00:00');
+      const dayOfWeek = isNaN(d.getDay()) ? new Date().getDay() : d.getDay();
+      return this.getRoutineForDay(dayOfWeek);
+    } catch {
+      return this.getRoutine();
+    }
+  }
+
+  static getRoutine(): DailyRoutineItem[] {
+    const today = new Date().getDay();
+    return this.getRoutineForDay(today);
+  }
+
+  static saveRoutineForDay(dayOfWeek: number, items: DailyRoutineItem[]): void {
+    try {
+      const rawMap = localStorage.getItem(STORAGE_KEYS.CUSTOM_ROUTINES_BY_DAY);
+      const parsedMap = rawMap ? JSON.parse(rawMap) : {};
+      parsedMap[dayOfWeek] = items;
+      localStorage.setItem(STORAGE_KEYS.CUSTOM_ROUTINES_BY_DAY, JSON.stringify(parsedMap));
+
+      // If updating today's routine, also sync with bridge and legacy storage
+      if (dayOfWeek === new Date().getDay()) {
+        localStorage.setItem(STORAGE_KEYS.CUSTOM_ROUTINE, JSON.stringify(items));
+        if (typeof window !== 'undefined') {
+          const bridge = (window as any).AndroidBridge;
+          if (bridge?.syncDailyRoutine) {
+            bridge.syncDailyRoutine(JSON.stringify(items));
+          }
+        }
+      }
+    } catch (_e) {}
+  }
+
+  static saveRoutine(items: DailyRoutineItem[], forDate?: string): void {
+    const dayOfWeek = forDate ? new Date(forDate + 'T12:00:00').getDay() : new Date().getDay();
+    this.saveRoutineForDay(dayOfWeek, items);
   }
 
   static getDailyRecord(dateStr: string): Record<string, DateTaskEntry> {

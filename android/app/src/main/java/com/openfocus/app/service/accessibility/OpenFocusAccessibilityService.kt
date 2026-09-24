@@ -67,6 +67,7 @@ class OpenFocusAccessibilityService : AccessibilityService() {
 
     private lateinit var stateManager: BlockingStateManager
     private var lockdownReceiver: LockdownReceiver? = null
+    private var routineReceiver: com.openfocus.app.receiver.RoutineNotificationReceiver? = null
     private var lastInterceptTimeMs = 0L
     private var lastInterceptTarget: String? = null
 
@@ -75,6 +76,8 @@ class OpenFocusAccessibilityService : AccessibilityService() {
         isServiceRunning = true
         stateManager = BlockingStateManager.getInstance(this)
         registerLockdownBroadcastReceiver()
+        registerRoutineBroadcastReceiver()
+        com.openfocus.app.manager.RoutineNotificationManager.updateNotification(this)
         Log.i(TAG, "OpenFocusAccessibilityService created and active")
     }
 
@@ -83,6 +86,8 @@ class OpenFocusAccessibilityService : AccessibilityService() {
         isServiceRunning = true
         stateManager = BlockingStateManager.getInstance(this)
         registerLockdownBroadcastReceiver()
+        registerRoutineBroadcastReceiver()
+        com.openfocus.app.manager.RoutineNotificationManager.updateNotification(this)
         Log.i(TAG, "Accessibility Service successfully connected to Android OS")
     }
 
@@ -98,6 +103,23 @@ class OpenFocusAccessibilityService : AccessibilityService() {
                 Log.i(TAG, "LockdownReceiver registered for SCREEN_ON & USER_PRESENT")
             } catch (e: Exception) {
                 Log.e(TAG, "Error registering LockdownReceiver: ${e.message}")
+            }
+        }
+    }
+
+    private fun registerRoutineBroadcastReceiver() {
+        if (routineReceiver == null) {
+            try {
+                routineReceiver = com.openfocus.app.receiver.RoutineNotificationReceiver()
+                val filter = IntentFilter().apply {
+                    addAction(Intent.ACTION_TIME_TICK)
+                    addAction(Intent.ACTION_TIME_CHANGED)
+                    addAction(Intent.ACTION_TIMEZONE_CHANGED)
+                }
+                registerReceiver(routineReceiver, filter)
+                Log.i(TAG, "RoutineNotificationReceiver registered for TIME_TICK")
+            } catch (e: Exception) {
+                Log.e(TAG, "Error registering RoutineNotificationReceiver: ${e.message}")
             }
         }
     }
@@ -188,7 +210,7 @@ class OpenFocusAccessibilityService : AccessibilityService() {
         } ?: return null
 
         try {
-            // First search known browser address bar view IDs
+            // Target the actual primary browser address bar view IDs
             val candidateIds = when {
                 packageName.contains("brave") -> listOf("com.brave.browser:id/url_bar", "url_bar")
                 packageName.contains("chrome") -> listOf("com.android.chrome:id/url_bar", "url_bar")
@@ -196,45 +218,101 @@ class OpenFocusAccessibilityService : AccessibilityService() {
                 packageName.contains("firefox") -> listOf("org.mozilla.firefox:id/toolbar", "org.mozilla.firefox:id/url_bar_title", "url_bar_title")
                 packageName.contains("sbrowser") -> listOf("com.sec.android.app.sbrowser:id/location_bar_edit_text", "location_bar_edit_text")
                 packageName.contains("opera") -> listOf("com.opera.browser:id/url_field", "url_field")
-                else -> listOf("url_bar", "location_bar", "address_bar", "search_box")
+                else -> listOf("url_bar", "location_bar_edit_text", "location_bar", "url_field", "address_bar")
             }
 
             for (id in candidateIds) {
                 val nodes = rootNode.findAccessibilityNodeInfosByViewId(id)
                 if (!nodes.isNullOrEmpty()) {
                     for (node in nodes) {
-                        val text = node.text?.toString()
-                        if (!text.isNullOrBlank() && text.contains(".")) {
-                            return text
+                        if (!node.isVisibleToUser) continue
+                        val resName = node.viewIdResourceName?.lowercase() ?: ""
+                        // Strictly reject shortcut tiles, most visited tiles, history suggestions, or tab switchers
+                        if (resName.contains("tile") ||
+                            resName.contains("most_visited") ||
+                            resName.contains("suggestion") ||
+                            resName.contains("tab_switcher") ||
+                            resName.contains("tab_strip")
+                        ) {
+                            continue
+                        }
+
+                        val rawText = (node.text?.toString() ?: node.contentDescription?.toString())?.trim()
+                        if (isValidBrowserAddressBarUrl(rawText)) {
+                            return rawText
                         }
                     }
                 }
             }
 
-            // Fallback: search for EditText or nodes containing a dot
-            return findUrlRecursively(rootNode, 0)
+            // Safe fallback: ONLY find an EditText specifically functioning as the address bar
+            return findAddressBarEditText(rootNode, 0)
         } catch (e: Exception) {
             Log.d(TAG, "Note during URL extraction: ${e.message}")
             return null
         }
     }
 
-    private fun findUrlRecursively(node: AccessibilityNodeInfo?, depth: Int): String? {
-        if (node == null || depth > 8) return null
+    private fun isValidBrowserAddressBarUrl(rawText: String?): Boolean {
+        if (rawText.isNullOrBlank()) return false
+        val lower = rawText.trim().lowercase()
 
-        val text = node.text?.toString()
-        if (!text.isNullOrBlank()) {
-            val lower = text.trim().lowercase()
-            if ((node.className == "android.widget.EditText" || node.viewIdResourceName?.contains("url", ignoreCase = true) == true) &&
-                lower.contains(".") && !lower.contains(" ") && !lower.startsWith("search")
-            ) {
-                return text
+        // Ignore internal browser pages and NTP (New Tab Page)
+        if (lower.startsWith("chrome://") ||
+            lower.startsWith("chrome-native://") ||
+            lower.startsWith("brave://") ||
+            lower.startsWith("about:") ||
+            lower.startsWith("content://") ||
+            lower.startsWith("file://")
+        ) {
+            return false
+        }
+
+        // Ignore placeholder search hints on New Tab Page / empty address bars
+        if (lower.startsWith("search or type") ||
+            lower.startsWith("type a url") ||
+            lower.startsWith("search or enter") ||
+            lower == "search" ||
+            lower == "new tab" ||
+            lower == "home"
+        ) {
+            return false
+        }
+
+        // A valid website address must contain a dot and no spaces
+        if (!lower.contains(".") || lower.contains(" ")) {
+            return false
+        }
+
+        return true
+    }
+
+    private fun findAddressBarEditText(node: AccessibilityNodeInfo?, depth: Int): String? {
+        if (node == null || depth > 4) return null
+
+        val resName = node.viewIdResourceName?.lowercase() ?: ""
+        // Strictly exclude non-address-bar elements
+        if (resName.contains("tile") ||
+            resName.contains("most_visited") ||
+            resName.contains("suggestion") ||
+            resName.contains("tab_strip") ||
+            resName.contains("tab_switcher")
+        ) {
+            return null
+        }
+
+        if (node.className == "android.widget.EditText" && node.isVisibleToUser) {
+            if (resName.contains("url_bar") || resName.contains("location_bar") || resName.contains("address")) {
+                val text = node.text?.toString()?.trim()
+                if (isValidBrowserAddressBarUrl(text)) {
+                    return text
+                }
             }
         }
 
         for (i in 0 until node.childCount) {
             val child = node.getChild(i)
-            val found = findUrlRecursively(child, depth + 1)
+            val found = findAddressBarEditText(child, depth + 1)
             if (found != null) return found
         }
         return null
@@ -297,7 +375,7 @@ class OpenFocusAccessibilityService : AccessibilityService() {
 
     private fun handleBlockedWebsite(domain: String, browserPackage: String) {
         val now = System.currentTimeMillis()
-        if (domain == lastInterceptTarget && (now - lastInterceptTimeMs) < 3500L) {
+        if (domain == lastInterceptTarget && (now - lastInterceptTimeMs) < 5000L) {
             return
         }
 
@@ -406,6 +484,12 @@ class OpenFocusAccessibilityService : AccessibilityService() {
                 unregisterReceiver(lockdownReceiver)
             } catch (_: Exception) {}
             lockdownReceiver = null
+        }
+        if (routineReceiver != null) {
+            try {
+                unregisterReceiver(routineReceiver)
+            } catch (_: Exception) {}
+            routineReceiver = null
         }
         Log.i(TAG, "OpenFocusAccessibilityService destroyed")
     }

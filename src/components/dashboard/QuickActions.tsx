@@ -1,5 +1,5 @@
 import React from 'react';
-import { Timer, ShieldAlert, BookOpen, BarChart3, PlusCircle } from 'lucide-react';
+import { Timer, ShieldAlert, BookOpen, BarChart3, PlusCircle, FileText } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 
 interface QuickActionsProps {
@@ -11,7 +11,7 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
   onOpenFocusModal,
   onOpenAddTaskModal
 }) => {
-  const { setActiveTab } = useApp();
+  const { setActiveTab, openTakeNoteModal } = useApp();
 
   const actions = [
     {
@@ -22,6 +22,15 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
       color: 'from-sky-500 to-blue-600',
       glow: 'shadow-sky-500/20',
       onClick: () => setActiveTab('focus')
+    },
+    {
+      id: 'notes',
+      label: 'Take Note',
+      sub: 'Notion Quick Capture',
+      icon: FileText,
+      color: 'from-violet-500 to-purple-600',
+      glow: 'shadow-violet-500/20',
+      onClick: () => openTakeNoteModal()
     },
     {
       id: 'chapters',
@@ -68,7 +77,7 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
         <span className="text-[11px] text-slate-400">One-tap productivity tools</span>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5">
         {actions.map((act) => {
           const Icon = act.icon;
           return (

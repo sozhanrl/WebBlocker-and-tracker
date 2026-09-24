@@ -67,14 +67,23 @@ class OpenFocusAccessibilityService : AccessibilityService() {
 
     private lateinit var stateManager: BlockingStateManager
     private var lockdownReceiver: LockdownReceiver? = null
+    private var routineReceiver: com.openfocus.app.receiver.RoutineNotificationReceiver? = null
     private var lastInterceptTimeMs = 0L
     private var lastInterceptTarget: String? = null
+
+    // URL debounce: track the last CONFIRMED navigated URL seen, so partial
+    // autocomplete text while still typing never triggers the blocker.
+    private var lastConfirmedUrl: String? = null
+    private var lastUrlCheckTimeMs = 0L
+    private val URL_DEBOUNCE_MS = 800L  // wait 800ms of the same URL before acting
 
     override fun onCreate() {
         super.onCreate()
         isServiceRunning = true
         stateManager = BlockingStateManager.getInstance(this)
         registerLockdownBroadcastReceiver()
+        registerRoutineBroadcastReceiver()
+        com.openfocus.app.manager.RoutineNotificationManager.updateNotification(this)
         Log.i(TAG, "OpenFocusAccessibilityService created and active")
     }
 
@@ -83,6 +92,8 @@ class OpenFocusAccessibilityService : AccessibilityService() {
         isServiceRunning = true
         stateManager = BlockingStateManager.getInstance(this)
         registerLockdownBroadcastReceiver()
+        registerRoutineBroadcastReceiver()
+        com.openfocus.app.manager.RoutineNotificationManager.updateNotification(this)
         Log.i(TAG, "Accessibility Service successfully connected to Android OS")
     }
 
@@ -98,6 +109,23 @@ class OpenFocusAccessibilityService : AccessibilityService() {
                 Log.i(TAG, "LockdownReceiver registered for SCREEN_ON & USER_PRESENT")
             } catch (e: Exception) {
                 Log.e(TAG, "Error registering LockdownReceiver: ${e.message}")
+            }
+        }
+    }
+
+    private fun registerRoutineBroadcastReceiver() {
+        if (routineReceiver == null) {
+            try {
+                routineReceiver = com.openfocus.app.receiver.RoutineNotificationReceiver()
+                val filter = IntentFilter().apply {
+                    addAction(Intent.ACTION_TIME_TICK)
+                    addAction(Intent.ACTION_TIME_CHANGED)
+                    addAction(Intent.ACTION_TIMEZONE_CHANGED)
+                }
+                registerReceiver(routineReceiver, filter)
+                Log.i(TAG, "RoutineNotificationReceiver registered for TIME_TICK")
+            } catch (e: Exception) {
+                Log.e(TAG, "Error registering RoutineNotificationReceiver: ${e.message}")
             }
         }
     }
@@ -123,6 +151,17 @@ class OpenFocusAccessibilityService : AccessibilityService() {
             packageName.contains("launcher", ignoreCase = true) ||
             packageName.contains("quickstep", ignoreCase = true)
         ) {
+            return
+        }
+
+        // For browsers: only do URL checks on WINDOW_STATE_CHANGED (real navigation).
+        // WINDOW_CONTENT_CHANGED fires on every keystroke while typing â€” we skip URL
+        // checks for those to prevent autocomplete suggestions from triggering a block.
+        val isNavigationEvent = (eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED)
+        val isBrowserEvent = isBrowserPackage(packageName)
+        if (isBrowserEvent && !isNavigationEvent) {
+            // Still allow app-level checks for browsers being in foreground,
+            // but skip URL inspection while the user is actively typing.
             return
         }
 
@@ -161,15 +200,32 @@ class OpenFocusAccessibilityService : AccessibilityService() {
         }
 
         // 4. Check for Blocked Website in Browser (Brave, Chrome, etc.)
+        //    Only fires on TYPE_WINDOW_STATE_CHANGED (actual page navigation).
         if (isBrowserPackage(packageName)) {
             val url = extractUrlFromActiveWindow(packageName)
             if (!url.isNullOrBlank()) {
+                val now = System.currentTimeMillis()
+                // Debounce: only act when we see the SAME fully-committed URL
+                // persist for at least URL_DEBOUNCE_MS. This prevents a single
+                // keystroke autocomplete ghost from triggering a block.
+                if (url != lastConfirmedUrl) {
+                    lastConfirmedUrl = url
+                    lastUrlCheckTimeMs = now
+                    return  // First sighting â€” wait for confirmation on next event
+                }
+                if ((now - lastUrlCheckTimeMs) < URL_DEBOUNCE_MS) {
+                    return  // Same URL but not stable long enough yet
+                }
+
                 val normalizedDomain = normalizeDomain(url)
                 val isBlocked = stateManager.isDomainBlocked(normalizedDomain) ||
                     (stateManager.isAdultContentBlockingEnabled() && stateManager.isAdultDomainOrUrl(url))
                 if (isBlocked) {
                     handleBlockedWebsite(normalizedDomain, packageName)
                 }
+            } else {
+                // URL bar is blank / typing in progress â€” reset confirmed URL state
+                lastConfirmedUrl = null
             }
         }
     }
@@ -188,7 +244,7 @@ class OpenFocusAccessibilityService : AccessibilityService() {
         } ?: return null
 
         try {
-            // First search known browser address bar view IDs
+            // Target the actual primary browser address bar view IDs
             val candidateIds = when {
                 packageName.contains("brave") -> listOf("com.brave.browser:id/url_bar", "url_bar")
                 packageName.contains("chrome") -> listOf("com.android.chrome:id/url_bar", "url_bar")
@@ -196,45 +252,136 @@ class OpenFocusAccessibilityService : AccessibilityService() {
                 packageName.contains("firefox") -> listOf("org.mozilla.firefox:id/toolbar", "org.mozilla.firefox:id/url_bar_title", "url_bar_title")
                 packageName.contains("sbrowser") -> listOf("com.sec.android.app.sbrowser:id/location_bar_edit_text", "location_bar_edit_text")
                 packageName.contains("opera") -> listOf("com.opera.browser:id/url_field", "url_field")
-                else -> listOf("url_bar", "location_bar", "address_bar", "search_box")
+                else -> listOf("url_bar", "location_bar_edit_text", "location_bar", "url_field", "address_bar")
             }
 
             for (id in candidateIds) {
                 val nodes = rootNode.findAccessibilityNodeInfosByViewId(id)
                 if (!nodes.isNullOrEmpty()) {
                     for (node in nodes) {
-                        val text = node.text?.toString()
-                        if (!text.isNullOrBlank() && text.contains(".")) {
-                            return text
+                        if (!node.isVisibleToUser) continue
+                        val resName = node.viewIdResourceName?.lowercase() ?: ""
+                        // Strictly reject shortcut tiles, most visited tiles, history suggestions, or tab switchers
+                        if (resName.contains("tile") ||
+                            resName.contains("most_visited") ||
+                            resName.contains("suggestion") ||
+                            resName.contains("tab_switcher") ||
+                            resName.contains("tab_strip")
+                        ) {
+                            continue
+                        }
+
+                        val rawText = (node.text?.toString() ?: node.contentDescription?.toString())?.trim()
+                        if (isValidBrowserAddressBarUrl(rawText)) {
+                            return rawText
                         }
                     }
                 }
             }
 
-            // Fallback: search for EditText or nodes containing a dot
-            return findUrlRecursively(rootNode, 0)
+            // Safe fallback: ONLY find an EditText specifically functioning as the address bar
+            return findAddressBarEditText(rootNode, 0)
         } catch (e: Exception) {
             Log.d(TAG, "Note during URL extraction: ${e.message}")
             return null
         }
     }
 
-    private fun findUrlRecursively(node: AccessibilityNodeInfo?, depth: Int): String? {
-        if (node == null || depth > 8) return null
+    /**
+     * Returns true ONLY if [rawText] is a fully committed, navigated URL â€”
+     * NOT a partial typed word, search query, or autocomplete suggestion.
+     *
+     * Key rules:
+     *  - Must NOT contain spaces (search queries have spaces)
+     *  - Must look like a real domain: contains a dot with a recognised TLD
+     *    (e.g. ".com", ".net", ".org", ".in", ".io", â€¦) or starts with http/https
+     *  - Must have at least one character before the dot (the domain name itself)
+     *  - TLD must be at least 2 chars and only letters (no digits â€” rejects IPs mid-type)
+     *
+     * This prevents autocomplete text that appears after typing a single letter
+     * from being treated as a committed URL.
+     */
+    private fun isValidBrowserAddressBarUrl(rawText: String?): Boolean {
+        if (rawText.isNullOrBlank()) return false
+        val lower = rawText.trim().lowercase()
 
-        val text = node.text?.toString()
-        if (!text.isNullOrBlank()) {
-            val lower = text.trim().lowercase()
-            if ((node.className == "android.widget.EditText" || node.viewIdResourceName?.contains("url", ignoreCase = true) == true) &&
-                lower.contains(".") && !lower.contains(" ") && !lower.startsWith("search")
-            ) {
-                return text
+        // Ignore internal browser pages and NTP (New Tab Page)
+        if (lower.startsWith("chrome://") ||
+            lower.startsWith("chrome-native://") ||
+            lower.startsWith("brave://") ||
+            lower.startsWith("about:") ||
+            lower.startsWith("content://") ||
+            lower.startsWith("file://")
+        ) {
+            return false
+        }
+
+        // Ignore placeholder search hints on New Tab Page / empty address bars
+        if (lower.startsWith("search or type") ||
+            lower.startsWith("type a url") ||
+            lower.startsWith("search or enter") ||
+            lower == "search" ||
+            lower == "new tab" ||
+            lower == "home"
+        ) {
+            return false
+        }
+
+        // Reject anything with spaces â€” real URLs never have unencoded spaces.
+        // Search queries ("manga site", "asurascan read online") all have spaces.
+        if (lower.contains(" ")) return false
+
+        // Strip scheme so we can inspect just the domain part
+        val withoutScheme = when {
+            lower.startsWith("https://") -> lower.removePrefix("https://")
+            lower.startsWith("http://")  -> lower.removePrefix("http://")
+            else -> lower
+        }
+
+        // Must have at least one dot
+        if (!withoutScheme.contains(".")) return false
+
+        // Extract the host part (before first slash or query)
+        val host = withoutScheme.split("/", "?", "#")[0]
+
+        // The host must look like "something.tld" where TLD is 2-13 alpha chars.
+        // This rejects things like "a" (single letter), "asura" (no dot), or
+        // mid-typed text like "asurascans" (no dot yet).
+        val domainRegex = Regex("""^[a-z0-9]([a-z0-9.\-]*[a-z0-9])?[.][a-z]{2,13}$""")
+        if (!domainRegex.matches(host)) return false
+
+        // Extra safety: reject if host starts with a dot or ends with a dot
+        if (host.startsWith(".") || host.endsWith(".")) return false
+
+        return true
+    }
+
+    private fun findAddressBarEditText(node: AccessibilityNodeInfo?, depth: Int): String? {
+        if (node == null || depth > 4) return null
+
+        val resName = node.viewIdResourceName?.lowercase() ?: ""
+        // Strictly exclude non-address-bar elements
+        if (resName.contains("tile") ||
+            resName.contains("most_visited") ||
+            resName.contains("suggestion") ||
+            resName.contains("tab_strip") ||
+            resName.contains("tab_switcher")
+        ) {
+            return null
+        }
+
+        if (node.className == "android.widget.EditText" && node.isVisibleToUser) {
+            if (resName.contains("url_bar") || resName.contains("location_bar") || resName.contains("address")) {
+                val text = node.text?.toString()?.trim()
+                if (isValidBrowserAddressBarUrl(text)) {
+                    return text
+                }
             }
         }
 
         for (i in 0 until node.childCount) {
             val child = node.getChild(i)
-            val found = findUrlRecursively(child, depth + 1)
+            val found = findAddressBarEditText(child, depth + 1)
             if (found != null) return found
         }
         return null
@@ -269,7 +416,7 @@ class OpenFocusAccessibilityService : AccessibilityService() {
             packageName
         }
 
-        Log.w(TAG, "🛑 BLOCKED APP DETECTED: $appName ($packageName)")
+        Log.w(TAG, "ðŸ›‘ BLOCKED APP DETECTED: $appName ($packageName)")
 
         // Record violation with 5-warning / 5-min / 30-min ladder
         val result = LockdownManager.recordAttempt(this, packageName, "app", appName)
@@ -297,14 +444,14 @@ class OpenFocusAccessibilityService : AccessibilityService() {
 
     private fun handleBlockedWebsite(domain: String, browserPackage: String) {
         val now = System.currentTimeMillis()
-        if (domain == lastInterceptTarget && (now - lastInterceptTimeMs) < 3500L) {
+        if (domain == lastInterceptTarget && (now - lastInterceptTimeMs) < 5000L) {
             return
         }
 
         lastInterceptTimeMs = now
         lastInterceptTarget = domain
 
-        Log.w(TAG, "🛑 BLOCKED WEBSITE DETECTED in browser ($browserPackage): '$domain'")
+        Log.w(TAG, "ðŸ›‘ BLOCKED WEBSITE DETECTED in browser ($browserPackage): '$domain'")
 
         // Navigate browser away from blocked URL directly to native Home / New Tab start page (Images 1 & 2)
         returnBrowserToStartPage(browserPackage)
@@ -407,6 +554,13 @@ class OpenFocusAccessibilityService : AccessibilityService() {
             } catch (_: Exception) {}
             lockdownReceiver = null
         }
+        if (routineReceiver != null) {
+            try {
+                unregisterReceiver(routineReceiver)
+            } catch (_: Exception) {}
+            routineReceiver = null
+        }
         Log.i(TAG, "OpenFocusAccessibilityService destroyed")
     }
 }
+

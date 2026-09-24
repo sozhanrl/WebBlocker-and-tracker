@@ -23,7 +23,8 @@ import {
   ChecklistRoutine,
   ChecklistItem,
   CalendarEvent,
-  SyncState
+  SyncState,
+  NotionPage
 } from '../types';
 import { StorageEngine } from '../lib/storage';
 import { getNativeBridge } from '../lib/nativeBridge';
@@ -44,7 +45,8 @@ export type NavigationTab =
   | 'analytics'
   | 'profile'
   | 'settings'
-  | 'study';
+  | 'study'
+  | 'notes';
 
 interface AppContextType {
   activeTab: NavigationTab;
@@ -167,6 +169,23 @@ interface AppContextType {
   triggerSimulatedBlock: (name: string, url?: string, reason?: string) => void;
   closeSimulatedBlock: () => void;
 
+  // Notion Workspace & Notes
+  notionPages: NotionPage[];
+  activeNotionPageId: string | null;
+  createNotionPage: (initial?: Partial<NotionPage>) => NotionPage;
+  updateNotionPage: (id: string, updates: Partial<NotionPage>) => void;
+  deleteNotionPage: (id: string) => void;
+  toggleFavoriteNotionPage: (id: string) => void;
+  togglePageStorage: (id: string) => void;
+  openNotionPage: (id: string) => void;
+  closeNotionPage: () => void;
+
+  // Quick Take Note Modal
+  isTakeNoteModalOpen: boolean;
+  takeNoteInitialData: { title?: string; content?: string; subject?: string; isStored?: boolean } | null;
+  openTakeNoteModal: (initial?: { title?: string; content?: string; subject?: string; isStored?: boolean }) => void;
+  closeTakeNoteModal: () => void;
+
   // Backup & Reset
   exportBackupJson: () => string;
   importBackupJson: (json: string) => boolean;
@@ -208,6 +227,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [analytics, setAnalyticsState] = useState<DailyAnalytics[]>(StorageEngine.getAnalytics());
   const [studySessions, setStudySessionsState] = useState<StudySession[]>(StorageEngine.getStudySessions());
   const [simulatedBlockedTarget, setSimulatedBlockedTarget] = useState<{ name: string; url?: string; reason: string } | null>(null);
+  const [notionPages, setNotionPagesState] = useState<NotionPage[]>(() => StorageEngine.getNotionPages());
+  const [activeNotionPageId, setActiveNotionPageId] = useState<string | null>(null);
+  const [isTakeNoteModalOpen, setIsTakeNoteModalOpen] = useState(false);
+  const [takeNoteInitialData, setTakeNoteInitialData] = useState<{ title?: string; content?: string; subject?: string; isStored?: boolean } | null>(null);
+
+  const openTakeNoteModal = useCallback((initial?: { title?: string; content?: string; subject?: string; isStored?: boolean }) => {
+    setTakeNoteInitialData(initial || null);
+    setIsTakeNoteModalOpen(true);
+  }, []);
+
+  const closeTakeNoteModal = useCallback(() => {
+    setIsTakeNoteModalOpen(false);
+    setTakeNoteInitialData(null);
+  }, []);
 
   // Normalizing active tab
   const setActiveTab = (tab: NavigationTab) => {
@@ -285,6 +318,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       isAdultBlockingEnabled: hasAdultActive
     }).catch(() => {});
   }, [blockedApps, blockedWebsites, isAdultShieldEnabled, selected18PlusCategories]);
+
+  // Sync Daily Routine to Native Android Bridge for live notification
+  useEffect(() => {
+    try {
+      const routine = StorageEngine.getChecklists();
+      if (routine && routine.length > 0) {
+        const primary = routine.find(r => r.isPinned) || routine[0];
+        if (primary && primary.items) {
+          const mapped = primary.items.map((it, idx) => ({
+            id: it.id || `rt-${idx}`,
+            time: it.timeRange || '08:00–09:00',
+            task: it.text,
+            category: it.isStudyBlock ? 'study' : 'personal'
+          }));
+          getNativeBridge().syncDailyRoutine(mapped).catch(() => {});
+        }
+      }
+    } catch (_e) {}
+  }, [checklists]);
 
   const setSelected18PlusCategories = (categories: string[]) => {
     setSelected18PlusCategoriesState(categories);
@@ -974,6 +1026,106 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setSettingsState(StorageEngine.getSettings());
     setAnalyticsState(StorageEngine.getAnalytics());
     setStudySessionsState(StorageEngine.getStudySessions());
+    setNotionPagesState(StorageEngine.getNotionPages());
+  };
+
+  // Notion Workspace Methods
+  const createNotionPage = (initial?: Partial<NotionPage>): NotionPage => {
+    const newPage: NotionPage = {
+      id: `page-${Date.now()}`,
+      title: initial?.title || 'Untitled',
+      icon: initial?.icon || '📄',
+      iconType: initial?.iconType || 'emoji',
+      coverGradient: initial?.coverGradient,
+      content: initial?.content || '',
+      parentId: initial?.parentId || null,
+      isFavorite: initial?.isFavorite ?? false,
+      isStored: initial?.isStored ?? true,
+      section: initial?.section || (initial?.isFavorite ? 'favorites' : 'private'),
+      subPageIds: initial?.subPageIds || [],
+      tags: initial?.tags || [],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+
+    const updated = [newPage, ...notionPages];
+    setNotionPagesState(updated);
+    if (newPage.isStored) {
+      StorageEngine.setNotionPages(updated);
+    }
+    setActiveNotionPageId(newPage.id);
+    return newPage;
+  };
+
+  const updateNotionPage = (id: string, updates: Partial<NotionPage>) => {
+    setNotionPagesState(prev => {
+      const updated = prev.map(p => {
+        if (p.id === id) {
+          const next = { ...p, ...updates, updatedAt: new Date().toISOString() };
+          return next;
+        }
+        return p;
+      });
+      StorageEngine.setNotionPages(updated);
+      return updated;
+    });
+  };
+
+  const deleteNotionPage = (id: string) => {
+    setNotionPagesState(prev => {
+      const updated = prev.filter(p => p.id !== id && p.parentId !== id);
+      StorageEngine.setNotionPages(updated);
+      return updated;
+    });
+    if (activeNotionPageId === id) {
+      setActiveNotionPageId(null);
+    }
+  };
+
+  const toggleFavoriteNotionPage = (id: string) => {
+    setNotionPagesState(prev => {
+      const updated = prev.map(p => {
+        if (p.id === id) {
+          const nextFav = !p.isFavorite;
+          return {
+            ...p,
+            isFavorite: nextFav,
+            section: nextFav ? ('favorites' as const) : ('private' as const),
+            updatedAt: new Date().toISOString()
+          };
+        }
+        return p;
+      });
+      StorageEngine.setNotionPages(updated);
+      return updated;
+    });
+  };
+
+  const togglePageStorage = (id: string) => {
+    setNotionPagesState(prev => {
+      const updated = prev.map(p => {
+        if (p.id === id) {
+          const nextStored = !p.isStored;
+          return {
+            ...p,
+            isStored: nextStored,
+            updatedAt: new Date().toISOString()
+          };
+        }
+        return p;
+      });
+      StorageEngine.setNotionPages(updated);
+      return updated;
+    });
+  };
+
+  const openNotionPage = (id: string) => {
+    setActiveNotionPageId(id);
+    setActiveTabState('notes');
+  };
+
+  const closeNotionPage = () => {
+    setActiveNotionPageId(null);
   };
 
   return (
@@ -1063,6 +1215,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         simulatedBlockedTarget,
         triggerSimulatedBlock,
         closeSimulatedBlock,
+        notionPages,
+        activeNotionPageId,
+        createNotionPage,
+        updateNotionPage,
+        deleteNotionPage,
+        toggleFavoriteNotionPage,
+        togglePageStorage,
+        openNotionPage,
+        closeNotionPage,
+        isTakeNoteModalOpen,
+        takeNoteInitialData,
+        openTakeNoteModal,
+        closeTakeNoteModal,
         exportBackupJson,
         importBackupJson,
         resetAllData

@@ -11,7 +11,8 @@ import {
   Award,
   CalendarDays,
   BarChart3,
-  User
+  User,
+  FileText
 } from 'lucide-react';
 import { useApp, NavigationTab } from '../../context/AppContext';
 import { useFocusTimer } from '../../context/FocusTimerContext';
@@ -22,6 +23,7 @@ export const DesktopNav: React.FC = () => {
 
   const navItems: Array<{ id: NavigationTab; label: string; icon: React.FC<any>; isLive?: boolean }> = [
     { id: 'home', label: 'Dashboard', icon: Home },
+    { id: 'notes', label: 'Notion Notes', icon: FileText },
     { id: 'tasks', label: 'Tasks', icon: ListTodo },
     { id: 'checklists', label: 'Checklists', icon: CheckSquare },
     { id: 'calendar', label: 'Calendar', icon: Calendar },
