@@ -4,6 +4,7 @@ import android.accessibilityservice.AccessibilityService
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.net.Uri
 import android.util.Log
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
@@ -70,6 +71,12 @@ class OpenFocusAccessibilityService : AccessibilityService() {
     private var routineReceiver: com.openfocus.app.receiver.RoutineNotificationReceiver? = null
     private var lastInterceptTimeMs = 0L
     private var lastInterceptTarget: String? = null
+
+    // URL debounce: track the last CONFIRMED navigated URL seen, so partial
+    // autocomplete text while still typing never triggers the blocker.
+    private var lastConfirmedUrl: String? = null
+    private var lastUrlCheckTimeMs = 0L
+    private val URL_DEBOUNCE_MS = 800L  // wait 800ms of the same URL before acting
 
     override fun onCreate() {
         super.onCreate()
@@ -148,30 +155,18 @@ class OpenFocusAccessibilityService : AccessibilityService() {
             return
         }
 
-        // 1. Check if an active lockout (5 or 30 minutes) is currently in effect
-        if (LockdownManager.isLockdownActive(this)) {
-            val isAppBlocked = stateManager.isAppBlocked(packageName)
-            val isBrowser = isBrowserPackage(packageName)
-
-            if (isAppBlocked) {
-                LockdownManager.enforceLockdownIfActive(this)
-                return
-            }
-
-            if (isBrowser) {
-                val currentUrl = extractUrlFromActiveWindow(packageName)
-                if (!currentUrl.isNullOrBlank()) {
-                    val domain = normalizeDomain(currentUrl)
-                    if (stateManager.isDomainBlocked(domain)) {
-                        LockdownManager.enforceLockdownIfActive(this)
-                        return
-                    }
-                }
-            }
+        // For browsers: only do URL checks on WINDOW_STATE_CHANGED (real navigation).
+        // WINDOW_CONTENT_CHANGED fires on every keystroke while typing â€” we skip URL
+        // checks for those to prevent autocomplete suggestions from triggering a block.
+        val isNavigationEvent = (eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED)
+        val isBrowserEvent = isBrowserPackage(packageName)
+        if (isBrowserEvent && !isNavigationEvent) {
+            // Still allow app-level checks for browsers being in foreground,
+            // but skip URL inspection while the user is actively typing.
             return
         }
 
-        // 2. Verify if focus session / global blocking is active
+        // 1. Verify if focus session / global blocking is active
         if (!stateManager.isBlockingEnforced()) {
             return
         }
@@ -183,15 +178,32 @@ class OpenFocusAccessibilityService : AccessibilityService() {
         }
 
         // 4. Check for Blocked Website in Browser (Brave, Chrome, etc.)
+        //    Only fires on TYPE_WINDOW_STATE_CHANGED (actual page navigation).
         if (isBrowserPackage(packageName)) {
             val url = extractUrlFromActiveWindow(packageName)
             if (!url.isNullOrBlank()) {
+                val now = System.currentTimeMillis()
+                // Debounce: only act when we see the SAME fully-committed URL
+                // persist for at least URL_DEBOUNCE_MS. This prevents a single
+                // keystroke autocomplete ghost from triggering a block.
+                if (url != lastConfirmedUrl) {
+                    lastConfirmedUrl = url
+                    lastUrlCheckTimeMs = now
+                    return  // First sighting â€” wait for confirmation on next event
+                }
+                if ((now - lastUrlCheckTimeMs) < URL_DEBOUNCE_MS) {
+                    return  // Same URL but not stable long enough yet
+                }
+
                 val normalizedDomain = normalizeDomain(url)
                 val isBlocked = stateManager.isDomainBlocked(normalizedDomain) ||
                     (stateManager.isAdultContentBlockingEnabled() && stateManager.isAdultDomainOrUrl(url))
                 if (isBlocked) {
                     handleBlockedWebsite(normalizedDomain, packageName)
                 }
+            } else {
+                // URL bar is blank / typing in progress â€” reset confirmed URL state
+                lastConfirmedUrl = null
             }
         }
     }
@@ -253,6 +265,20 @@ class OpenFocusAccessibilityService : AccessibilityService() {
         }
     }
 
+    /**
+     * Returns true ONLY if [rawText] is a fully committed, navigated URL â€”
+     * NOT a partial typed word, search query, or autocomplete suggestion.
+     *
+     * Key rules:
+     *  - Must NOT contain spaces (search queries have spaces)
+     *  - Must look like a real domain: contains a dot with a recognised TLD
+     *    (e.g. ".com", ".net", ".org", ".in", ".io", â€¦) or starts with http/https
+     *  - Must have at least one character before the dot (the domain name itself)
+     *  - TLD must be at least 2 chars and only letters (no digits â€” rejects IPs mid-type)
+     *
+     * This prevents autocomplete text that appears after typing a single letter
+     * from being treated as a committed URL.
+     */
     private fun isValidBrowserAddressBarUrl(rawText: String?): Boolean {
         if (rawText.isNullOrBlank()) return false
         val lower = rawText.trim().lowercase()
@@ -279,10 +305,31 @@ class OpenFocusAccessibilityService : AccessibilityService() {
             return false
         }
 
-        // A valid website address must contain a dot and no spaces
-        if (!lower.contains(".") || lower.contains(" ")) {
-            return false
+        // Reject anything with spaces â€” real URLs never have unencoded spaces.
+        // Search queries ("manga site", "asurascan read online") all have spaces.
+        if (lower.contains(" ")) return false
+
+        // Strip scheme so we can inspect just the domain part
+        val withoutScheme = when {
+            lower.startsWith("https://") -> lower.removePrefix("https://")
+            lower.startsWith("http://")  -> lower.removePrefix("http://")
+            else -> lower
         }
+
+        // Must have at least one dot
+        if (!withoutScheme.contains(".")) return false
+
+        // Extract the host part (before first slash or query)
+        val host = withoutScheme.split("/", "?", "#")[0]
+
+        // The host must look like "something.tld" where TLD is 2-13 alpha chars.
+        // This rejects things like "a" (single letter), "asura" (no dot), or
+        // mid-typed text like "asurascans" (no dot yet).
+        val domainRegex = Regex("""^[a-z0-9]([a-z0-9.\-]*[a-z0-9])?[.][a-z]{2,13}$""")
+        if (!domainRegex.matches(host)) return false
+
+        // Extra safety: reject if host starts with a dot or ends with a dot
+        if (host.startsWith(".") || host.endsWith(".")) return false
 
         return true
     }
@@ -347,7 +394,7 @@ class OpenFocusAccessibilityService : AccessibilityService() {
             packageName
         }
 
-        Log.w(TAG, "🛑 BLOCKED APP DETECTED: $appName ($packageName)")
+        Log.w(TAG, "ðŸ›‘ BLOCKED APP DETECTED: $appName ($packageName)")
 
         // Record violation with 5-warning / 5-min / 30-min ladder
         val result = LockdownManager.recordAttempt(this, packageName, "app", appName)
@@ -375,7 +422,7 @@ class OpenFocusAccessibilityService : AccessibilityService() {
 
     private fun handleBlockedWebsite(domain: String, browserPackage: String) {
         val now = System.currentTimeMillis()
-        if (domain == lastInterceptTarget && (now - lastInterceptTimeMs) < 5000L) {
+        if (domain == lastInterceptTarget && (now - lastInterceptTimeMs) < 3000L) {
             return
         }
 
@@ -384,16 +431,11 @@ class OpenFocusAccessibilityService : AccessibilityService() {
 
         Log.w(TAG, "🛑 BLOCKED WEBSITE DETECTED in browser ($browserPackage): '$domain'")
 
-        // Navigate browser away from blocked URL directly to native Home / New Tab start page (Images 1 & 2)
+        // Immediately navigate the browser away from the blocked URL to Google (https://www.google.com)
         returnBrowserToStartPage(browserPackage)
 
-        // Record violation with 5-warning / 5-min / 30-min ladder
-        val result = LockdownManager.recordAttempt(this, domain, "website", domain)
-
-        if (result.isLockdown) {
-            Log.w(TAG, "Lockdown triggered for domain $domain (Stage ${result.stage})")
-            return
-        }
+        // Increment stats without any device lockout
+        val todayCount = LockdownManager.incrementTodayBlockCount(this)
 
         val category = if (stateManager.isAdultDomainOrUrl(domain)) {
             "18+ Adult & Hentai Content"
@@ -405,8 +447,8 @@ class OpenFocusAccessibilityService : AccessibilityService() {
         val intent = Intent(this, WebsiteBlockedActivity::class.java).apply {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
             putExtra(WebsiteBlockedActivity.EXTRA_DOMAIN, domain)
-            putExtra(WebsiteBlockedActivity.EXTRA_STRIKE_COUNT, result.strikeCount)
-            putExtra(WebsiteBlockedActivity.EXTRA_TODAY_COUNT, result.todayBlockCount)
+            putExtra(WebsiteBlockedActivity.EXTRA_STRIKE_COUNT, 1)
+            putExtra(WebsiteBlockedActivity.EXTRA_TODAY_COUNT, todayCount)
             putExtra(WebsiteBlockedActivity.EXTRA_CATEGORY, category)
             putExtra(WebsiteBlockedActivity.EXTRA_BROWSER_PACKAGE, browserPackage)
         }
@@ -414,58 +456,21 @@ class OpenFocusAccessibilityService : AccessibilityService() {
     }
 
     /**
-     * Navigates the browser away from the blocked URL directly to its native Home / Start screen
-     * (Chrome New Tab Page with Google search & shortcuts, or Brave New Tab Page with privacy stats & wallpaper).
+     * Navigates the browser away from the blocked URL directly to Google (https://www.google.com).
+     * This replaces the blocked URL tab with Google, freeing the user to search or open a new tab.
      */
     private fun returnBrowserToStartPage(packageName: String) {
         try {
-            val rootNode = rootInActiveWindow
-            var navigated = false
-
-            if (rootNode != null) {
-                // 1. Look for Home button in Chrome, Brave, Samsung Internet, Edge, etc.
-                val homeIds = listOf(
-                    "$packageName:id/home_button",
-                    "home_button",
-                    "$packageName:id/toolbar_home_button",
-                    "toolbar_home_button"
-                )
-                for (id in homeIds) {
-                    val nodes = rootNode.findAccessibilityNodeInfosByViewId(id)
-                    if (!nodes.isNullOrEmpty()) {
-                        for (node in nodes) {
-                            if (node.isClickable && node.performAction(AccessibilityNodeInfo.ACTION_CLICK)) {
-                                Log.i(TAG, "Navigated $packageName to Start Page via Home button ($id)")
-                                navigated = true
-                                break
-                            }
-                        }
-                    }
-                    if (navigated) break
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://www.google.com")).apply {
+                if (packageName.isNotBlank()) {
+                    setPackage(packageName)
                 }
-
-                // 2. If Home button not found by ID, look for contentDescription containing "Home"
-                if (!navigated) {
-                    val homeDescNodes = rootNode.findAccessibilityNodeInfosByText("Home")
-                    if (!homeDescNodes.isNullOrEmpty()) {
-                        for (node in homeDescNodes) {
-                            if (node.isClickable && node.performAction(AccessibilityNodeInfo.ACTION_CLICK)) {
-                                Log.i(TAG, "Navigated $packageName to Start Page via text/description 'Home'")
-                                navigated = true
-                                break
-                            }
-                        }
-                    }
-                }
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
             }
-
-            // 3. Fallback: Perform Global Action Back to pop off the blocked URL back to New Tab / Start page
-            if (!navigated) {
-                performGlobalAction(GLOBAL_ACTION_BACK)
-                Log.i(TAG, "Navigated $packageName to Start Page via GLOBAL_ACTION_BACK")
-            }
+            startActivity(intent)
+            Log.i(TAG, "Navigated $packageName directly to https://www.google.com")
         } catch (e: Exception) {
-            Log.e(TAG, "Error returning browser to start page: ${e.message}")
+            Log.e(TAG, "Error returning browser to Google: ${e.message}")
             try {
                 performGlobalAction(GLOBAL_ACTION_BACK)
             } catch (_: Exception) {}
@@ -494,3 +499,4 @@ class OpenFocusAccessibilityService : AccessibilityService() {
         Log.i(TAG, "OpenFocusAccessibilityService destroyed")
     }
 }
+

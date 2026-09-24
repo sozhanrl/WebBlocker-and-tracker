@@ -34,35 +34,10 @@ class LockdownOverlayActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        configureWindowFlags()
-        setContentView(R.layout.activity_lockdown_overlay)
-
-        val targetName = intent.getStringExtra(EXTRA_TARGET_NAME) ?: "Restricted Target"
-        val stage = intent.getIntExtra(EXTRA_STAGE, 1)
-        val durationMinutes = intent.getIntExtra(EXTRA_DURATION_MINUTES, if (stage == 2) 30 else 5)
-
-        val tvTitle = findViewById<TextView>(R.id.tvLockdownTitle)
-        val tvReason = findViewById<TextView>(R.id.tvLockdownReason)
-        val tvCountdown = findViewById<TextView>(R.id.tvCountdownTimer)
-        val btnOpenTracker = findViewById<Button>(R.id.btnOpenNeetTracker)
-
-        if (stage == 2 || durationMinutes >= 30) {
-            tvTitle.text = "30-Minute Focus Lockdown"
-            tvReason.text = "Continued attempts detected on '$targetName'. Extended 30-minute lockout active."
-        } else {
-            tvTitle.text = "5-Minute Focus Lockdown"
-            tvReason.text = "5 attempts detected on '$targetName'. 5-minute study cooldown active."
-        }
-
-        btnOpenTracker.setOnClickListener {
-            val homeIntent = Intent(this, MainActivity::class.java).apply {
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
-            }
-            startActivity(homeIntent)
-            finish()
-        }
-
-        startLiveCountdown(tvCountdown)
+        // Timer and lockout disabled per user directive - cancel and finish immediately
+        LockdownManager.cancelLockdown(this)
+        finish()
+        return
     }
 
     private fun configureWindowFlags() {

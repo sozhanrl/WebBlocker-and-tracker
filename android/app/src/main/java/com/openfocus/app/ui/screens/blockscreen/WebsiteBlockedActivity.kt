@@ -91,23 +91,28 @@ class WebsiteBlockedActivity : AppCompatActivity() {
     }
 
     /**
-     * Returns the user to their browser's native Home / New Tab start screen
-     * (Chrome New Tab Page with Google search & shortcuts, or Brave New Tab Page).
+     * Returns the user to Google (https://www.google.com) in their browser
+     * replacing the blocked website tab so they can search or open a new tab freely.
      */
     private fun returnToBrowser() {
         countDownTimer?.cancel()
         val pkg = browserPackage ?: getPreferredBrowserPackage()
         try {
-            if (!pkg.isNullOrBlank()) {
-                val launchIntent = packageManager.getLaunchIntentForPackage(pkg)?.apply {
-                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED)
+            val googleIntent = Intent(Intent.ACTION_VIEW, Uri.parse("https://www.google.com")).apply {
+                if (!pkg.isNullOrBlank()) {
+                    setPackage(pkg)
                 }
-                if (launchIntent != null) {
-                    startActivity(launchIntent)
-                }
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
             }
+            startActivity(googleIntent)
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to launch browser: ${e.message}")
+            Log.e(TAG, "Failed to launch Google in browser: ${e.message}")
+            try {
+                val genericIntent = Intent(Intent.ACTION_VIEW, Uri.parse("https://www.google.com")).apply {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                startActivity(genericIntent)
+            } catch (_: Exception) {}
         }
         finish()
     }

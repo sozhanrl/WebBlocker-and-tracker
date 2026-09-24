@@ -116,65 +116,10 @@ object LockdownManager {
         prefs.edit().putLong("last_violation_time:$cleanKey", now).apply()
 
         // 2. Check if a lockout is ALREADY currently active
-        val currentLockdownUntil = prefs.getLong("lockdown_until", 0L)
-        if (now < currentLockdownUntil) {
-            Log.w(TAG, "Attempt during active lockdown on '$cleanKey'. Escalating to 30-min Stage 2.")
-            triggerLockdown(context, cleanKey, targetType, displayName, durationMinutes = 30, stage = 2)
-            val remSec = getRemainingLockdownSec(context)
-            return ViolationResult(
-                strikeCount = 5,
-                maxStrikes = 5,
-                isLockdown = true,
-                stage = 2,
-                remainingSeconds = remSec,
-                targetKey = cleanKey,
-                targetName = displayName
-            )
-        }
-
-        // 3. Check if target previously completed a 5-minute lockout
-        val previousLockouts = prefs.getInt("lockouts_completed:$cleanKey", 0)
-        if (previousLockouts > 0) {
-            // Continued attempt after previous 5-min lockout -> trigger 30-min Stage 2 directly
-            Log.w(TAG, "Repeated attempt on '$cleanKey' after previous lockout. Escalating to 30 minutes.")
-            triggerLockdown(context, cleanKey, targetType, displayName, durationMinutes = 30, stage = 2)
-            return ViolationResult(
-                strikeCount = 5,
-                maxStrikes = 5,
-                isLockdown = true,
-                stage = 2,
-                remainingSeconds = 1800L,
-                targetKey = cleanKey,
-                targetName = displayName
-            )
-        }
-
-        // 4. Normal 5-strike warning progression
-        val currentStrikes = prefs.getInt("violations:$cleanKey", 0)
-        val newStrikes = currentStrikes + 1
-        prefs.edit().putInt("violations:$cleanKey", newStrikes).apply()
         val todayCount = incrementTodayBlockCount(context)
-
-        Log.i(TAG, "Recorded strike $newStrikes/5 for '$cleanKey' (today total: $todayCount)")
-
-        if (newStrikes >= 5) {
-            // 5th strike reached: trigger 5-minute Stage 1 lockout!
-            Log.w(TAG, "5th strike reached for '$cleanKey'. Triggering 5-minute study lockout.")
-            triggerLockdown(context, cleanKey, targetType, displayName, durationMinutes = 5, stage = 1)
-            return ViolationResult(
-                strikeCount = 5,
-                maxStrikes = 5,
-                isLockdown = true,
-                stage = 1,
-                remainingSeconds = 300L,
-                targetKey = cleanKey,
-                targetName = displayName,
-                todayBlockCount = todayCount
-            )
-        }
-
+        // Timer/Lockout completely disabled per user directive - never lock device or trigger countdown
         return ViolationResult(
-            strikeCount = newStrikes,
+            strikeCount = 1,
             maxStrikes = 5,
             isLockdown = false,
             stage = 0,
@@ -223,70 +168,21 @@ object LockdownManager {
 
         Log.w(TAG, "🚨 STAGE $stage LOCKDOWN ACTIVE: $durationMinutes min until $lockdownUntil for '$targetId'")
 
-        // 1. Lock screen immediately via Device Admin lockNow() if available
-        val dpm = context.getSystemService(Context.DEVICE_POLICY_SERVICE) as? DevicePolicyManager
-        val adminComponent = ComponentName(context, FocusDeviceAdminReceiver::class.java)
-
-        if (dpm != null && dpm.isAdminActive(adminComponent)) {
-            try {
-                dpm.lockNow()
-                Log.i(TAG, "DevicePolicyManager.lockNow() locked the screen")
-            } catch (e: Exception) {
-                Log.e(TAG, "Error calling lockNow(): ${e.message}")
-            }
-        } else {
-            Log.w(TAG, "Device Admin not granted. Full-screen countdown overlay will enforce focus restriction.")
-        }
-
-        // 2. Launch full-screen unskippable countdown overlay
-        try {
-            val overlayIntent = Intent(context, LockdownOverlayActivity::class.java).apply {
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
-                putExtra(LockdownOverlayActivity.EXTRA_LOCKDOWN_UNTIL, lockdownUntil)
-                putExtra(LockdownOverlayActivity.EXTRA_TARGET_NAME, targetName.ifBlank { targetId })
-                putExtra(LockdownOverlayActivity.EXTRA_DURATION_MINUTES, durationMinutes)
-                putExtra(LockdownOverlayActivity.EXTRA_STAGE, stage)
-            }
-            context.startActivity(overlayIntent)
-        } catch (e: Exception) {
-            Log.e(TAG, "Error starting LockdownOverlayActivity: ${e.message}")
-        }
+        // Lockouts and timers disabled per user directive
+        cancelLockdown(context)
     }
 
     /**
      * Enforces re-lock if lockdown is still running (called on SCREEN_ON / USER_PRESENT).
      */
     fun enforceLockdownIfActive(context: Context) {
-        val prefs = getPrefs(context)
-        val lockdownUntil = prefs.getLong("lockdown_until", 0L)
-        val now = System.currentTimeMillis()
-
-        if (now < lockdownUntil) {
-            Log.w(TAG, "Lockdown is active (${(lockdownUntil - now) / 1000}s remaining). Displaying overlay.")
-
-            try {
-                val stage = prefs.getInt("lockout_stage", 1)
-                val durationMin = prefs.getInt("lockout_duration_minutes", 5)
-                val targetName = prefs.getString("lockout_target_name", "Blocked Target") ?: "Blocked Target"
-
-                val overlayIntent = Intent(context, LockdownOverlayActivity::class.java).apply {
-                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
-                    putExtra(LockdownOverlayActivity.EXTRA_LOCKDOWN_UNTIL, lockdownUntil)
-                    putExtra(LockdownOverlayActivity.EXTRA_TARGET_NAME, targetName)
-                    putExtra(LockdownOverlayActivity.EXTRA_DURATION_MINUTES, durationMin)
-                    putExtra(LockdownOverlayActivity.EXTRA_STAGE, stage)
-                }
-                context.startActivity(overlayIntent)
-            } catch (e: Exception) {
-                Log.e(TAG, "Error showing LockdownOverlayActivity: ${e.message}")
-            }
-        }
+        // Disabled per user directive
+        cancelLockdown(context)
     }
 
     fun isLockdownActive(context: Context): Boolean {
-        val prefs = getPrefs(context)
-        val lockdownUntil = prefs.getLong("lockdown_until", 0L)
-        return System.currentTimeMillis() < lockdownUntil
+        // Always false - countdown timers and device lockouts are off
+        return false
     }
 
     fun getRemainingLockdownSec(context: Context): Long {

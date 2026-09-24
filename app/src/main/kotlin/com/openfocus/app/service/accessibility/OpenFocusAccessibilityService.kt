@@ -4,6 +4,7 @@ import android.accessibilityservice.AccessibilityService
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.net.Uri
 import android.util.Log
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
@@ -165,30 +166,7 @@ class OpenFocusAccessibilityService : AccessibilityService() {
             return
         }
 
-        // 1. Check if an active lockout (5 or 30 minutes) is currently in effect
-        if (LockdownManager.isLockdownActive(this)) {
-            val isAppBlocked = stateManager.isAppBlocked(packageName)
-            val isBrowser = isBrowserPackage(packageName)
-
-            if (isAppBlocked) {
-                LockdownManager.enforceLockdownIfActive(this)
-                return
-            }
-
-            if (isBrowser) {
-                val currentUrl = extractUrlFromActiveWindow(packageName)
-                if (!currentUrl.isNullOrBlank()) {
-                    val domain = normalizeDomain(currentUrl)
-                    if (stateManager.isDomainBlocked(domain)) {
-                        LockdownManager.enforceLockdownIfActive(this)
-                        return
-                    }
-                }
-            }
-            return
-        }
-
-        // 2. Verify if focus session / global blocking is active
+        // 1. Verify if focus session / global blocking is active
         if (!stateManager.isBlockingEnforced()) {
             return
         }
@@ -444,25 +422,20 @@ class OpenFocusAccessibilityService : AccessibilityService() {
 
     private fun handleBlockedWebsite(domain: String, browserPackage: String) {
         val now = System.currentTimeMillis()
-        if (domain == lastInterceptTarget && (now - lastInterceptTimeMs) < 5000L) {
+        if (domain == lastInterceptTarget && (now - lastInterceptTimeMs) < 3000L) {
             return
         }
 
         lastInterceptTimeMs = now
         lastInterceptTarget = domain
 
-        Log.w(TAG, "ðŸ›‘ BLOCKED WEBSITE DETECTED in browser ($browserPackage): '$domain'")
+        Log.w(TAG, "🛑 BLOCKED WEBSITE DETECTED in browser ($browserPackage): '$domain'")
 
-        // Navigate browser away from blocked URL directly to native Home / New Tab start page (Images 1 & 2)
+        // Immediately navigate the browser away from the blocked URL to Google (https://www.google.com)
         returnBrowserToStartPage(browserPackage)
 
-        // Record violation with 5-warning / 5-min / 30-min ladder
-        val result = LockdownManager.recordAttempt(this, domain, "website", domain)
-
-        if (result.isLockdown) {
-            Log.w(TAG, "Lockdown triggered for domain $domain (Stage ${result.stage})")
-            return
-        }
+        // Increment stats without any device lockout
+        val todayCount = LockdownManager.incrementTodayBlockCount(this)
 
         val category = if (stateManager.isAdultDomainOrUrl(domain)) {
             "18+ Adult & Hentai Content"
@@ -474,8 +447,8 @@ class OpenFocusAccessibilityService : AccessibilityService() {
         val intent = Intent(this, WebsiteBlockedActivity::class.java).apply {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
             putExtra(WebsiteBlockedActivity.EXTRA_DOMAIN, domain)
-            putExtra(WebsiteBlockedActivity.EXTRA_STRIKE_COUNT, result.strikeCount)
-            putExtra(WebsiteBlockedActivity.EXTRA_TODAY_COUNT, result.todayBlockCount)
+            putExtra(WebsiteBlockedActivity.EXTRA_STRIKE_COUNT, 1)
+            putExtra(WebsiteBlockedActivity.EXTRA_TODAY_COUNT, todayCount)
             putExtra(WebsiteBlockedActivity.EXTRA_CATEGORY, category)
             putExtra(WebsiteBlockedActivity.EXTRA_BROWSER_PACKAGE, browserPackage)
         }
@@ -483,58 +456,21 @@ class OpenFocusAccessibilityService : AccessibilityService() {
     }
 
     /**
-     * Navigates the browser away from the blocked URL directly to its native Home / Start screen
-     * (Chrome New Tab Page with Google search & shortcuts, or Brave New Tab Page with privacy stats & wallpaper).
+     * Navigates the browser away from the blocked URL directly to Google (https://www.google.com).
+     * This replaces the blocked URL tab with Google, freeing the user to search or open a new tab.
      */
     private fun returnBrowserToStartPage(packageName: String) {
         try {
-            val rootNode = rootInActiveWindow
-            var navigated = false
-
-            if (rootNode != null) {
-                // 1. Look for Home button in Chrome, Brave, Samsung Internet, Edge, etc.
-                val homeIds = listOf(
-                    "$packageName:id/home_button",
-                    "home_button",
-                    "$packageName:id/toolbar_home_button",
-                    "toolbar_home_button"
-                )
-                for (id in homeIds) {
-                    val nodes = rootNode.findAccessibilityNodeInfosByViewId(id)
-                    if (!nodes.isNullOrEmpty()) {
-                        for (node in nodes) {
-                            if (node.isClickable && node.performAction(AccessibilityNodeInfo.ACTION_CLICK)) {
-                                Log.i(TAG, "Navigated $packageName to Start Page via Home button ($id)")
-                                navigated = true
-                                break
-                            }
-                        }
-                    }
-                    if (navigated) break
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://www.google.com")).apply {
+                if (packageName.isNotBlank()) {
+                    setPackage(packageName)
                 }
-
-                // 2. If Home button not found by ID, look for contentDescription containing "Home"
-                if (!navigated) {
-                    val homeDescNodes = rootNode.findAccessibilityNodeInfosByText("Home")
-                    if (!homeDescNodes.isNullOrEmpty()) {
-                        for (node in homeDescNodes) {
-                            if (node.isClickable && node.performAction(AccessibilityNodeInfo.ACTION_CLICK)) {
-                                Log.i(TAG, "Navigated $packageName to Start Page via text/description 'Home'")
-                                navigated = true
-                                break
-                            }
-                        }
-                    }
-                }
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
             }
-
-            // 3. Fallback: Perform Global Action Back to pop off the blocked URL back to New Tab / Start page
-            if (!navigated) {
-                performGlobalAction(GLOBAL_ACTION_BACK)
-                Log.i(TAG, "Navigated $packageName to Start Page via GLOBAL_ACTION_BACK")
-            }
+            startActivity(intent)
+            Log.i(TAG, "Navigated $packageName directly to https://www.google.com")
         } catch (e: Exception) {
-            Log.e(TAG, "Error returning browser to start page: ${e.message}")
+            Log.e(TAG, "Error returning browser to Google: ${e.message}")
             try {
                 performGlobalAction(GLOBAL_ACTION_BACK)
             } catch (_: Exception) {}

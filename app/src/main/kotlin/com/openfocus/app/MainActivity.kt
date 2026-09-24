@@ -31,6 +31,9 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
+        // Clear any residual countdown lockouts so the device is immediately unlocked
+        com.openfocus.app.manager.LockdownManager.clearAllLockdownsAndStrikes(this)
+
         // Initialize persistent NEET daily routine notification
         RoutineNotificationManager.updateNotification(this)
 
